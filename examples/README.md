@@ -5,7 +5,8 @@
 CairoMakie activates `plot_kneading_contours` and
 `save_kneading_contours`.
 
-`chebyshev_cubic_scan.jl` computes the two critical orbits of
+`chebyshev_cubic_kneading.jl` uses the public package APIs to scan the two
+critical orbits of
 
 $$
 f_{u,v}(x)
