@@ -1,4 +1,7 @@
 # Kneading.jl
+
+[![Documentation](https://img.shields.io/badge/docs-dev-blue.svg)](https://hinsley.github.io/Kneading.jl/dev/)
+
 Symbolic dynamics for one-dimensional maps
 
 The current intention is to support the calculation of topological entropy for piecewise-continuous, piecewise-monotone self-maps of an interval, as well as to support the rendering of kneading diagrams for both 1D maps and flows with 1D return map reductions (e.g., the Lorenz family).
