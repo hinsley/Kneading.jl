@@ -29,6 +29,9 @@ and the parameters are their critical values:
 f_{u,v}(c_-)=u, \qquad f_{u,v}(c_+)=v.
 ```
 
+Explore the family interactively in the
+[Chebyshev cubic Desmos calculator](https://www.desmos.com/calculator/vb6a1fp6ex).
+
 A contour in this tutorial marks parameters where an entry in a critical
 orbit equals ``c_-`` or ``c_+``. These are critical-relation curves of the
 form
