@@ -1,9 +1,24 @@
 ### Directions and Orientations
 
+"""
+The orientation of a monotone lap.
+
+The values are [`Increasing`](@ref) and [`Decreasing`](@ref).
+"""
 @enum LapOrientation::Int8 Increasing = 1 Decreasing = -1
 
-# The two unit tangent directions at a point of the interval.
+@doc "A lap whose map values increase from left to right." Increasing
+@doc "A lap whose map values decrease from left to right." Decreasing
+
+"""
+The side from which an orbit starts at a partition point.
+
+The values are [`LeftSide`](@ref) and [`RightSide`](@ref).
+"""
 @enum TangentDirection::Int8 LeftSide = -1 RightSide = 1
+
+@doc "The one-sided orbit that starts immediately left of a partition point." LeftSide
+@doc "The one-sided orbit that starts immediately right of a partition point." RightSide
 
 ### Directed Points
 

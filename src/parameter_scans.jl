@@ -362,18 +362,31 @@ function add_level_contours!(
 end
 
 """
-    plot_kneading_contours(diagram; kwargs...)
+    plot_kneading_contours(
+        diagram;
+        colors=Dict(),
+        opacity=iterate -> 1.0,
+        linewidth=2.0,
+        size=(1000, 1000),
+        xticks=nothing,
+        yticks=nothing,
+    )
 
-Plot a kneading diagram. Load CairoMakie to activate this method.
+Plot every contour layer in `diagram` and return a CairoMakie `Figure`.
+`colors` maps each layer's `source` to a color. `opacity` receives a layer's
+iterate number and returns its opacity. Load CairoMakie to activate this
+method.
 """
 function plot_kneading_contours(args...; kwargs...)
     throw(ArgumentError("load CairoMakie before plotting a kneading diagram"))
 end
 
 """
-    save_kneading_contours(path, diagram; kwargs...)
+    save_kneading_contours(path, diagram; px_per_unit=1, kwargs...)
 
-Plot and save a kneading diagram. Load CairoMakie to activate this method.
+Plot `diagram`, save the figure to `path`, and return `path`. The remaining
+keyword arguments are passed to [`plot_kneading_contours`](@ref). Load
+CairoMakie to activate this method.
 """
 function save_kneading_contours(args...; kwargs...)
     throw(ArgumentError("load CairoMakie before saving a kneading diagram"))

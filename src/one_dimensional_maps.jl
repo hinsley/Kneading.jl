@@ -1,3 +1,7 @@
+"""
+Interval maps, finite kneading data, kneading algebra, and finite-surrogate
+entropy estimates.
+"""
 module OneDimensionalMaps
 
 export Decreasing,

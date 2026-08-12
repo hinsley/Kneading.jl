@@ -32,6 +32,32 @@ Each independent point in `scan_plane!` may run concurrently. Use
 `scan_continuation!` when state must instead advance sequentially along each
 row or column.
 
+The next example gives every row its own counter and advances it across the
+row from left to right:
+
+```@example continuation-scan
+using Kneading.Diagrams
+
+plane = ParameterPlane(0:3, 0:2)
+values = zeros(Int, length(plane.y), length(plane.x), 1)
+
+step! = function (output, state, x, y)
+    state[] += 1
+    output[1] = state[]
+end
+state_factory = (line_index, initial_x, initial_y) -> Ref(0)
+
+scan_continuation!(
+    step!,
+    state_factory,
+    values,
+    plane;
+    along = :rows,
+)
+
+values[:, :, 1]
+```
+
 ## Planes and scans
 
 ```@docs
@@ -51,6 +77,23 @@ boolean_contours
 add_level_contours!
 ```
 
+Boolean contours use the same marching-squares geometry to find boundaries
+between `false` and `true` grid values:
+
+```@example boolean-contours
+using Kneading.Diagrams
+
+plane = ParameterPlane(0:2, 0:2)
+classification = Bool[
+    false false true
+    false true  true
+    false false true
+]
+
+segments = boolean_contours(plane, classification)
+length(segments)
+```
+
 ## Plotting
 
 Load CairoMakie to activate the plotting extension:
@@ -68,5 +111,6 @@ plot_kneading_contours
 save_kneading_contours
 ```
 
-The complete Chebyshev cubic scan is available in the
-[examples directory](https://github.com/hinsley/Kneading.jl/tree/main/examples).
+Continue with the
+[Chebyshev cubic kneading-diagram tutorial](@ref chebyshev-cubic-tutorial), or see the
+[complete example scripts](https://github.com/hinsley/Kneading.jl/tree/main/examples).

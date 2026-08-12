@@ -18,11 +18,15 @@ makedocs(
     sitename = "Kneading.jl",
     format = Documenter.HTML(
         prettyurls = true,
-        canonical = "https://hinsley.github.io/Kneading.jl/stable/",
+        canonical = "https://hinsley.github.io/Kneading.jl/dev/",
     ),
     checkdocs = :exports,
     pages = [
         "Home" => "index.md",
+        "Tutorials" => [
+            "Chebyshev cubic kneading diagram" =>
+                "tutorials/chebyshev-cubic-kneading-diagram.md",
+        ],
         "One-dimensional maps" => "one-dimensional-maps.md",
         "Kneading diagrams" => "diagrams.md",
     ],

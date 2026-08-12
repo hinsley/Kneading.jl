@@ -1,3 +1,7 @@
+"""
+Parameter-plane scans, contour geometry, and optional CairoMakie plotting for
+kneading diagrams.
+"""
 module Diagrams
 
 export ContourLayer,

@@ -41,7 +41,13 @@ matrix = kneading_matrix(data)
 determinant = kneading_determinant(matrix)
 entropy = entropy_estimate(determinant)
 
-(determinant = determinant, entropy = entropy.estimate)
+(
+    orientations = interval_map.orientations,
+    left_itinerary = data[1, LeftSide],
+    right_itinerary = data[1, RightSide],
+    determinant = determinant,
+    entropy = entropy.estimate,
+)
 ```
 
 The returned entropy interval certifies the finite determinant surrogate. It
@@ -49,9 +55,17 @@ does not certify the unknown infinite tail of the kneading series.
 
 ## Directions and orientations
 
-`LapOrientation` has the values `Increasing` and `Decreasing`.
-`TangentDirection` has the values `LeftSide` and `RightSide`; these values
-select the one-sided orbit at a partition point.
+The orientation tells how a lap maps from left to right. The tangent direction
+selects which one-sided orbit starts at a partition point.
+
+```@docs
+LapOrientation
+Increasing
+Decreasing
+TangentDirection
+LeftSide
+RightSide
+```
 
 ## Interval maps and kneading data
 
@@ -74,6 +88,19 @@ kneading_determinant
 polynomial_approximation
 ```
 
+`PowerSeriesJet` truncates every operation to its stored coefficient count.
+`Polynomial` retains every coefficient produced by its operations. Coefficients
+are supplied in ascending degree order:
+
+```@example kneading-algebra
+using Kneading.OneDimensionalMaps
+
+jet = PowerSeriesJet([1, -2, 0, 1])
+polynomial = polynomial_approximation(jet)
+
+(jet = jet, polynomial = polynomial)
+```
+
 ## Entropy estimates
 
 ```@docs
@@ -81,4 +108,11 @@ RootInterval
 EntropyEstimate
 real_root_intervals
 entropy_estimate
+```
+
+`real_root_intervals` uses exact rational arithmetic. This example isolates
+the root of ``1 - 2t + t^3`` inside ``(0, 1)``:
+
+```@example kneading-algebra
+real_root_intervals(polynomial)
 ```

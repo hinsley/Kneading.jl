@@ -4,6 +4,9 @@
 
 Symbolic dynamics for one-dimensional maps
 
+See the [documentation](https://hinsley.github.io/Kneading.jl/dev/) and the
+[Chebyshev cubic kneading-diagram tutorial](https://hinsley.github.io/Kneading.jl/dev/tutorials/chebyshev-cubic-kneading-diagram/).
+
 The current intention is to support the calculation of topological entropy for piecewise-continuous, piecewise-monotone self-maps of an interval, as well as to support the rendering of kneading diagrams for both 1D maps and flows with 1D return map reductions (e.g., the Lorenz family).
 
 Currently, this package does not support weighted kneading theory or
