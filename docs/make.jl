@@ -29,6 +29,7 @@ makedocs(
         ],
         "One-dimensional maps" => "one-dimensional-maps.md",
         "Kneading diagrams" => "diagrams.md",
+        "AI disclaimer" => "ai-disclaimer.md",
     ],
 )
 

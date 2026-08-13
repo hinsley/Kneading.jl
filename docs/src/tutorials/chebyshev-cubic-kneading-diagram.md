@@ -221,8 +221,3 @@ For a quicker preview, reduce the grid and number of orbit entries:
 CHEBYSHEV_GRID_SIZE=200 CHEBYSHEV_ITERATES=8 \
     julia --project=examples examples/chebyshev_cubic_kneading.jl
 ```
-
-## AI disclaimer
-
-This tutorial page was written with AI assistance and has only been cursorily
-reviewed by a human.
