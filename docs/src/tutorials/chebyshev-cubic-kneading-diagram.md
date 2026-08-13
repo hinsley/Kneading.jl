@@ -151,9 +151,10 @@ Check the active thread count inside Julia with:
 Threads.nthreads()
 ```
 
-The outer loop over orbit entries remains sequential. Entry ``n+1`` depends
-on entry ``n``, and `scan_plane!` waits for all parameter columns to finish
-before the next entry begins. After each orbit update, the four calls to
+The loop over successive orbit iterates remains sequential: each value
+``f_{u,v}^{n+1}(c_s)`` is computed from ``f_{u,v}^{n}(c_s)``. `scan_plane!`
+waits for all parameter columns to finish one iterate before the next begins.
+After each orbit update, the four calls to
 `add_level_contours!` run sequentially. Their marching-squares work in
 `level_contours` is currently serial, as is the final CairoMakie rendering.
 
