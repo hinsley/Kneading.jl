@@ -129,6 +129,40 @@ The stored critical point is orbit entry 1. One map application produces
 entry 2, so `ContourLayer.iterate` uses one-based orbit-entry numbers. A layer
 labeled `iterate = 2` therefore represents ``f(c_s)=c_t``.
 
+## Threading behavior
+
+The tutorial is partly multithreaded. `scan_plane!` uses `Threads.@threads`
+across the parameter plane's `u` columns. Each loop task advances both critical
+orbits for every `v` value in its current column. Every callback writes only to
+its own `orbit_values[v_index, u_index, :]` slice, so these updates do not share
+mutable output locations.
+
+Julia must start with more than one thread for this stage to run in parallel.
+Use `--threads=auto` to let Julia select the thread count:
+
+```bash
+julia --threads=auto --project=examples \
+    examples/chebyshev_cubic_kneading.jl
+```
+
+Check the active thread count inside Julia with:
+
+```julia
+Threads.nthreads()
+```
+
+The outer loop over orbit entries remains sequential. Entry ``n+1`` depends
+on entry ``n``, and `scan_plane!` waits for all parameter columns to finish
+before the next entry begins. After each orbit update, the four calls to
+`add_level_contours!` run sequentially. Their marching-squares work in
+`level_contours` is currently serial, as is the final CairoMakie rendering.
+
+Consequently, additional threads accelerate only the critical-orbit updates;
+they do not parallelize contour extraction or plotting. The tutorial code and
+`chebyshev_cubic_kneading.jl` use this threaded `scan_plane!` path. The
+reusable calculation in `chebyshev_cubic_scan.jl` currently advances the
+parameter grid with explicit serial loops.
+
 ## Render the diagram
 
 Load CairoMakie to activate the plotting extension. Red curves come from the
