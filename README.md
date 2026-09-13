@@ -2,7 +2,7 @@
 
 [![Documentation](https://img.shields.io/badge/docs-dev-blue.svg)](https://hinsley.github.io/Kneading.jl/dev/)
 
-Symbolic dynamics for one-dimensional maps
+Symbolic dynamics for one-dimensional maps and flow-derived return maps
 
 See the [documentation](https://hinsley.github.io/Kneading.jl/dev/) and the
 [Chebyshev cubic kneading-diagram tutorial](https://hinsley.github.io/Kneading.jl/dev/tutorials/chebyshev-cubic-kneading-diagram/).
@@ -14,12 +14,21 @@ generalized topological pressures.
 
 # Package namespaces
 
-The package is divided into two public namespaces:
+The package is divided into five public namespaces:
 
 - `Kneading.OneDimensionalMaps` provides interval maps, kneading algebra, and
   entropy estimates.
 - `Kneading.Diagrams` provides parameter-plane scans, contour geometry, and
   plotting hooks.
+- `Kneading.FlowKneading` initializes critical orbits, captures extremum events,
+  and computes orientation words and parameter-plane diagrams.
+- `Kneading.RealSaddleInitialization` constructs orbit and tangent seeds at
+  real saddles with one unstable direction.
+- `Kneading.FlowNormalTangents` integrates a unit tangent normal to the flow.
+
+See the [flow-kneading guide](docs/src/flow-kneading.md) for Lorenz and Rössler
+usage. The [Rössler diagram example](examples/rossler_kneading_diagram.jl)
+reproduces the reference scan using only public library calls.
 
 # One-dimensional example
 

@@ -1,2 +1,7 @@
 /docs/build/
 /docs/Manifest.toml
+/Manifest.toml
+/examples/Manifest.toml
+/output/rossler-*.tsv
+/output/figures/rossler-flow-kneading-*.png
+/output/preview-figures/

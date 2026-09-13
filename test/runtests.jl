@@ -4,9 +4,20 @@ using Kneading.Diagrams
 using Kneading.OneDimensionalMaps
 using Test
 
+include("flow_normal_tangents.jl")
+include("real_saddle_initialization.jl")
+include("saddle_focus_initialization.jl")
+include("flow_words.jl")
+include("flow_kneading_scan.jl")
+include("docs_flow_examples.jl")
+include("rossler_reference.jl")
+
 @testset "Public namespaces" begin
     @test :Diagrams in names(Kneading)
+    @test :FlowNormalTangents in names(Kneading)
+    @test :FlowKneading in names(Kneading)
     @test :OneDimensionalMaps in names(Kneading)
+    @test :RealSaddleInitialization in names(Kneading)
     @test !(:ParameterPlane in names(Kneading))
     @test !(:PartitionedIntervalMap in names(Kneading))
 end
