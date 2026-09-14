@@ -54,7 +54,7 @@ Flow kneading requires a particular initial condition to be chosen; since partit
   $\mathbf{x}(0)$ along a chosen branch of that direction, and constructs
   $\vec{v}(0)$ from the leading (i.e., weakest) stable direction by projecting it normal to the
   flow and normalizing it.
-- **Saddle-focus initialization:** `init_saddle_focus` selects a local seed
+- **[Saddle-focus initialization](#Saddle-focus-initialization):** `init_saddle_focus` selects a local seed
   ray from the intersection of the two-dimensional unstable spiral eigenspace
   with the tangent plane to a chosen extremum section. It integrates candidate
   seeds to successive extrema, solves for a critical point of the induced
