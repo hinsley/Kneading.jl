@@ -2,117 +2,42 @@
 
 [![Documentation](https://img.shields.io/badge/docs-dev-blue.svg)](https://hinsley.github.io/Kneading.jl/dev/)
 
-Symbolic dynamics for one-dimensional maps and flow-derived return maps
+Kneading theory for one-dimensional maps and symbolic analysis of flows with approximately one-dimensional return maps.
 
-See the [documentation](https://hinsley.github.io/Kneading.jl/dev/) and the
-[Chebyshev cubic kneading-diagram tutorial](https://hinsley.github.io/Kneading.jl/dev/tutorials/chebyshev-cubic-kneading-diagram/).
+## Kneading for one-dimensional maps
 
-The current intention is to support the calculation of topological entropy for piecewise-continuous, piecewise-monotone self-maps of an interval, as well as to support the rendering of kneading diagrams for both 1D maps and flows with 1D return map reductions (e.g., the Lorenz family).
+For piecewise-continuous, piecewise-monotone self-maps of an interval, `Kneading.OneDimensionalMaps` supports:
 
-Currently, this package does not support weighted kneading theory or
-generalized topological pressures.
+- Lap partitions, increasing and decreasing branches, and one-sided itineraries at partition points.
+- Finite kneading data, kneading matrices, and kneading determinants.
+- Truncated power-series and polynomial arithmetic for kneading algebra.
+- Topological entropy estimates from finite determinant approximations.
 
-# Package namespaces
+Weighted kneading theory and generalized topological pressures are not currently supported.
 
-The package is divided into five public namespaces:
+See the [one-dimensional maps documentation](https://hinsley.github.io/Kneading.jl/dev/one-dimensional-maps/).
 
-- `Kneading.OneDimensionalMaps` provides interval maps, kneading algebra, and
-  entropy estimates.
-- `Kneading.Diagrams` provides parameter-plane scans, contour geometry, and
-  plotting hooks.
-- `Kneading.FlowKneading` initializes critical orbits, captures extremum events,
-  and computes orientation words and parameter-plane diagrams.
-- `Kneading.RealSaddleInitialization` constructs orbit and tangent seeds at
-  real saddles with one unstable direction.
-- `Kneading.FlowNormalTangents` integrates a unit tangent normal to the flow.
+## Flow kneading
 
-See the [flow-kneading guide](docs/src/flow-kneading.md) for Lorenz and Rössler
-usage. The [Rössler diagram example](examples/rossler_kneading_diagram.jl)
-reproduces the reference scan using only public library calls.
+For autonomous ODE systems whose attractors admit approximately one-dimensional return maps, `Kneading.FlowKneading` computes symbolic orientation words by transporting a tangent vector normal to the flow and sampling it at selected events. Support includes:
 
-# One-dimensional example
+- Critical-orbit initialization from real saddles with one unstable direction.
+- Saddle-focus initialization and parameter continuation of smooth return-map critical points, with seed-refinement checks.
+- Variational tangent integration with projection and normalization.
+- Capture of local maxima or minima of a state variable, with optional event-acceptance filters.
+- Component or observable-direction signs, orientation-preservation and reversal words, event states, and return times.
+- Parameter-plane scans with continuation, incomplete-word reporting, and export of scan results.
 
-The snippet below uses kneading itineraries truncated at 10 iterates to calculate an approximation of the topological entropy for the one-dimensional map defined piecewise by
+The lower-level `Kneading.RealSaddleInitialization` and
+`Kneading.FlowNormalTangents` namespaces also expose orbit-seeding and
+tangent-integration tools independently of symbolic encoding.
 
-$$
-f(x) =
-\begin{cases}
-x/2, & 0 \leq x < 1/3, \\
-3x-1, & 1/3 \leq x < 2/3, \\
-3-3x, & 2/3 \leq x \leq 1.
-\end{cases}
-$$
+See the [flow-kneading documentation](https://hinsley.github.io/Kneading.jl/dev/flow-kneading/).
 
-```jl
-using Kneading.OneDimensionalMaps
+## Kneading diagrams and parameter scans
 
-function f(x)
-    if x < 1 // 3
-        return x / 2
-    elseif x < 2 // 3
-        return 3x - 1
-    else
-        return 3 - 3x
-    end
-end
+`Kneading.Diagrams` provides rectangular parameter grids, independent and continuation-based scans, and contour extraction from scalar or Boolean fields. These tools accept data from interval maps, flow-derived return maps, or other numerical calculations.
 
-domain = (0 // 1, 1 // 1)
-partition_points = [1 // 3, 2 // 3]
-partition = LapPartition(domain, partition_points)
+Contour layers retain their source and iterate metadata. Optional CairoMakie integration provides plotting and figure export; scanning and contour extraction do not require a plotting dependency.
 
-interval_map = PartitionedIntervalMap(f, partition)
-
-@show interval_map.orientations # LapOrientation[Increasing, Increasing, Decreasing]
-
-data = kneading_data(interval_map, 10)
-
-@show size(data.itineraries)    # (2, 2)
-@show length(data[1, LeftSide]) # 11
-
-matrix = kneading_matrix(data)
-
-@show size(matrix)         # (2, 3)
-@show eltype(matrix)       # PowerSeriesJet{BigInt}
-@show length(matrix[1, 1]) # 11
-
-determinant = kneading_determinant(matrix)
-
-@show determinant # (1 - 2*t + O(t^11)) / (1 - t)
-
-# We can force the determinant calculation to use polynomials instead of
-# power-series jets so that higher-degree terms are retained in multiplications.
-#=
-polynomial_determinant = kneading_determinant(
-    matrix;
-    mode = :polynomial,
-)
-# Its higher coefficients can depend on which lap is deleted.
-=#
-
-entropy = entropy_estimate(determinant)
-
-@show entropy.estimate # 0.693147180559945...
-@show entropy.entropy_interval # This interval certifies the finite surrogate, not its unknown tail.
-```
-
-# Parameter-plane scans
-
-Use the diagram API with:
-
-```jl
-using Kneading.Diagrams
-```
-
-`ParameterPlane` defines a rectangular parameter grid. `scan_plane!`
-evaluates one or more scalar fields on that grid. `level_contours` extracts
-interpolated contour segments, and `KneadingDiagram` collects those segments
-with their source and iterate metadata.
-
-These operations do not depend on how a scalar field was produced. The field
-can come from an interval map, a projected return map, or stored numerical
-data.
-
-Loading CairoMakie activates `plot_kneading_contours` and
-`save_kneading_contours`. CairoMakie is not required for scanning or contour
-extraction. See [the Chebyshev cubic example](examples/README.md) for a complete
-scan and plot.
+See the [kneading-diagram documentation](https://hinsley.github.io/Kneading.jl/dev/diagrams/).
