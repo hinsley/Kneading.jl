@@ -39,7 +39,7 @@ If it's important to anyone, I can clean this sketch up and make it easier to un
 
 ## Background
 
-Take a system specified via `DynamicalSystem` and `TangentDynamicalSystem` in $\mathbb{R}^N$ for some $n \geq 3$ as a flow governed by an autonomous ODE system:
+Take a flow in $\mathbb{R}^N$ for some $N \geq 3$, governed by an autonomous ODE system supplied as a `CoupledODEs`, together with its tangent dynamics:
 $$\dot{\mathbf{x}} = \mathbf{f}(\mathbf{x}), \qquad \mathbf{x} \in \mathbb{R}^N,$$
 $$\dot{\vec{v}} = D\mathbf{f}\vec{v}, \qquad \vec{v}(t) \in T_{\mathbf{x}(t)}\mathbb{R}^N.$$
 
@@ -62,7 +62,12 @@ Flow kneading requires a particular initial condition to be chosen; since partit
   sensitivities.
 
 ## Integration
-Any `TangentDynamicalSystem`-based integrator can be used.
+`flow_kneading` and `init_saddle_focus` accept only a `CoupledODEs`. They read its rule and parameters, then integrate the state and tangent together as one augmented ODE, computing $D\mathbf{f}$ with ForwardDiff.
+`FlowKneadingProblem` uses adaptive Tsit5 by default, controlled by `abstol`, `reltol`, `dtmax`, and `maxiters`, or fixed-step RK4 with `integration = :rk4` and `dt`.
+`init_saddle_focus` uses Tsit5 unless you pass another solver as `alg`.
+Any solver, tolerances, or callbacks configured on the `CoupledODEs` itself are not used.
+To transport a flow-normal tangent with your own `TangentDynamicalSystem`, use the lower-level `init_flow_normal` and `solve_flow_normal!` from `Kneading.FlowNormalTangents`.
+
 The flow-normal tangent vector $\vec{v}(t)$ is integrated according to the tangent dynamics $\dot{\vec{v}} = D\mathbf{f}(\mathbf{x}(t))\vec{v}$, but each integration step (or every few integration steps) $\vec{v}$ is projected onto the orthogonal subspace of the flow direction:
 $$\vec{v} \leftarrow \vec{v} - \mathrm{proj}_{\mathbf{f}(\mathbf{x})} \vec{v}.$$
 The projected vector is then normalized:
@@ -635,12 +640,23 @@ Install the optional plotting dependencies first with
 For a quick trial, set the environment variable `ROSSLER_RESOLUTION=32`;
 `ROSSLER_OUTPUT` selects the output TSV path.
 
-The script fixes $M=4$ (`refine = false`) and uses RK4 with
-`dt = 0.05`. It includes the critical
-point's sign and seven subsequent $y$-minimum signs, without a transient.
-These settings differ from the default adaptive integration and disable
-seed-refinement checks. Check that contours are
-stable under tighter integration settings, seed refinement, and longer words.
+The script reproduces a historical reference protocol. It includes the
+critical point's sign and seven subsequent $y$-minimum signs, without a
+transient. Its settings differ from the defaults as follows:
+
+- `initial_event_index = 4` with `refine = false`: $M$ is fixed and
+  seed-refinement checks are disabled.
+- `criticality_tolerance = 1e-6` (default `1e-8`), initialization
+  `abstol = reltol = 1e-9` (default `1e-11`), and `rho_samples = 45`
+  (default `65`).
+- `integration = :rk4` with `dt = 0.05`, instead of adaptive integration.
+- `minimum_event_separation = 0.025` (default `1e-7`).
+- `sign_atol = sign_rtol = 0` (default `1e-10`), so only an exactly zero
+  component is reported as `:ambiguous_sign`. The near-zero sign guard is
+  effectively disabled.
+
+Check that contours are stable under tighter initialization and integration
+settings, seed refinement, nonzero sign tolerances, and longer words.
 
 ![Rössler kneading diagram computed by the public flow-kneading API, with seven transition signs](assets/rossler-flow-kneading-diagram.png)
 
