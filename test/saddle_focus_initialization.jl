@@ -117,6 +117,50 @@ end
     configured = SaddleFocusInitializer(equilibrium_guess=zeros(3), initial_rho=-1.47, refine=false)
     @test configured(oop).rho ≈ fixed.rho atol=1e-9
 
+    # A window around the index-5 launch radius excludes every index-4 root.
+    revolution = 2pi * real(fixed.diagnostics.eigenvalue) / imag(fixed.diagnostics.eigenvalue)
+    window = (fixed.rho - revolution - 0.3, fixed.rho - revolution + 0.3)
+    no_fallback = try
+        init_saddle_focus(oop; equilibrium_guess=zeros(3), rho_range=window,
+            refine=false, event_index_fallback=false)
+    catch error
+        error
+    end
+    @test no_fallback isa SaddleFocusInitializationError
+    @test no_fallback.stage == :root
+    fallback = init_saddle_focus(oop; equilibrium_guess=zeros(3), rho_range=window, refine=false)
+    @test fallback.event_index == 5
+    @test fallback.rho ≈ fixed.rho - revolution atol=0.01
+    @test fallback.u0 ≈ fixed.u0 atol=1e-8
+    @test abs(fallback.diagnostics.residual) <= 1e-8
+    @test fallback.diagnostics.initial_event_index == 4
+    @test fallback.diagnostics.root_event_index == 5
+    @test fallback.diagnostics.root_rho_range == window
+    @test fallback.diagnostics.root_fallback_used
+    @test [attempt.event_index for attempt in fallback.diagnostics.failed_root_attempts] == [4]
+    @test !fixed.diagnostics.root_fallback_used
+    @test isempty(fixed.diagnostics.failed_root_attempts)
+    refined_fallback = init_saddle_focus(oop; equilibrium_guess=zeros(3), rho_range=window)
+    @test refined_fallback.diagnostics.root_event_index == 5
+    @test refined_fallback.diagnostics.converged
+    @test refined_fallback.u0 ≈ fixed.u0 atol=1e-6
+    exhausted = try
+        init_saddle_focus(oop; equilibrium_guess=zeros(3), rho_range=(-1.3, -1.0),
+            maximum_event_index=4, rho_samples=20, refine=false)
+    catch error
+        error
+    end
+    @test exhausted isa SaddleFocusInitializationError
+    @test exhausted.stage == :root
+    @test [attempt.event_index for attempt in exhausted.diagnostics.attempts] == [4, 3, 2, 1]
+    widened = init_saddle_focus(oop; equilibrium_guess=zeros(3), rho_range=(-1.3, -1.0),
+        fallback_rho_range=(-1.6, -1.0), maximum_event_index=4, rho_samples=20, refine=false)
+    @test widened.event_index == 4
+    @test widened.rho ≈ fixed.rho atol=1e-8
+    @test widened.diagnostics.root_rho_range == (-1.6, -1.0)
+    @test length(widened.diagnostics.failed_root_attempts) == 4
+    @test_throws ArgumentError init_saddle_focus(oop; equilibrium_guess=zeros(3), fallback_rho_range=(-1.0, -2.0))
+
     maximum_ray = FK._sf_seed_ray(ctx, fixed.equilibrium, LocalMaximum(2))
     @test maximum_ray.direction ≈ -ray.direction atol=1e-14
     maximum_events, failure = FK._sf_events(ctx, LocalMaximum(2), maximum_ray, -1.5, 5, options)

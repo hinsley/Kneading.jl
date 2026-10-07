@@ -346,7 +346,7 @@ function _sf_initial_root(ctx, capture, ray, rho, M, options; target, fallback, 
     fallback || throw(first_error)
     tried = isnothing(fallback_rho_range) ? "" : " over rho_range=$(options.rho_range) and fallback_rho_range=$fallback_rho_range"
     throw(SaddleFocusInitializationError(first_error.stage,
-        "$(first_error.message) (also tried event indices $(join(indices, ", "))$tried)",
+        "$(first_error.message) (tried event indices $(join(indices, ", "))$tried)",
         merge(first_error.diagnostics, (; attempts))))
 end
 
