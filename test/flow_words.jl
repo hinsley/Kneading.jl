@@ -136,6 +136,7 @@ end
     )
     positive = flow_kneading(problem)
     @test positive.complete
+    @test !positive.metadata.tangent_seed_fallback
     @test length(positive.events) == 7
     @test all(event -> event.value > 0 && event.rate < 0, positive.events)
     @test all(event -> abs(event.state[2] - event.state[1]) < 1e-8, positive.events)
@@ -144,4 +145,59 @@ end
         @test norm(event.tangent) ≈ 1.0 atol = 1e-12
         @test abs(dot(event.tangent, lorenz_rule(event.state, positive.metadata.parameters, event.time))) < 1e-9
     end
+end
+
+@testset "Degenerate real-saddle tangent seeds" begin
+    # Lorenz with a slow linear variable w that does not feed back. Its rate
+    # makes e_w the leading stable direction, and span(e_w) is invariant under
+    # the variational equation, so the leading-stable seed never reaches z.
+    for drive in (0.0, 0.5)
+        rule(u, p, t) = SVector(10.0 * (u[2] - u[1]), u[1] * (28.0 - u[3]) - u[2],
+            u[1] * u[2] - 8 / 3 * u[3], -p[1] * u[4] + drive * u[1])
+        system = CoupledODEs(rule, zeros(4), [0.1])
+        solve(tangent_seed; kwargs...) = flow_kneading(FlowKneadingProblem(system;
+            initializer = RealSaddleInitializer(; equilibrium_guess = zeros(4), tangent_seed),
+            capture = LocalMaximum(3), word_length = 8, maximum_time = 200.0, kwargs...))
+
+        unchecked = solve(:leading_stable; seed_invariance_tolerance = nothing)
+        @test unchecked.initialization.leading_stable_eigenvalue ≈ -0.1
+        @test unchecked.initialization.seed_direction ≈ [0.0, 0.0, 0.0, 1.0]
+        @test abs(first(unchecked.events).component) < 1e-10
+
+        rejected = solve(:leading_stable)
+        @test !rejected.complete
+        @test rejected.status === :degenerate_tangent_seed
+        @test isempty(rejected.events)
+        @test !isempty(rejected.metadata.detail)
+
+        automatic = solve(:auto)
+        @test automatic.complete
+        @test automatic.metadata.tangent_seed_fallback
+        @test automatic.initialization.tangent_seed == 3
+        @test automatic.initialization.seed_direction == [0.0, 0.0, 1.0, 0.0]
+        @test all(event -> abs(event.component) > 0.1, automatic.events)
+        for tangent_seed in (1, [1.0, 2.0, -1.0, 0.0])
+            other = solve(tangent_seed)
+            @test other.complete
+            @test !other.metadata.tangent_seed_fallback
+            @test other.transition_word == automatic.transition_word
+        end
+
+        # A returned seed, as reused by parameter scans, falls back in the same way.
+        seed = Kneading.RealSaddleInitialization.init_real_saddle(system, zeros(4), 1e-6,
+            Kneading.RealSaddleInitialization.RealSaddleTolerances(
+                1e-10, 1e-8, 1e-8, 1e-8, 1e-8, 1e-10, 1e-12, 1e-12);
+            max_root_iterations = 30, equilibrium_branch = :selected,
+            equilibrium_branch_check = u -> true,
+            unstable_reference = ones(4), stable_reference = ones(4))
+        @test seed.tangent_seed === :auto
+        reused = flow_kneading(FlowKneadingProblem(system; initializer = seed,
+            capture = LocalMaximum(3), word_length = 8, maximum_time = 200.0))
+        @test reused.metadata.tangent_seed_fallback
+        @test reused.transition_word == automatic.transition_word
+    end
+    @test_throws ArgumentError RealSaddleInitializer(equilibrium_guess = zeros(4), tangent_seed = :weakest)
+    @test_throws ArgumentError FlowKneadingProblem(CoupledODEs((u, p, t) -> -u, zeros(3));
+        initializer = RealSaddleInitializer(equilibrium_guess = zeros(3)),
+        capture = LocalMaximum(1), seed_invariance_tolerance = -1.0)
 end

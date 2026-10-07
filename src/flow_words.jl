@@ -5,6 +5,14 @@ Configure initialization from a real saddle with one unstable direction and a
 real, simple leading stable direction. The unstable branch is `1` or `-1`.
 Explicit `unstable_reference` and `stable_reference` vectors fix orientation;
 their defaults are all-ones vectors. Spectral or orientation failures are errors.
+
+`tangent_seed` selects the vector projected normal to the flow to form the
+initial tangent: `:auto` (default) or `:leading_stable` for the leading stable
+eigenvector, an integer `i` for the coordinate direction `e_i`, or a vector.
+[`flow_kneading`](@ref) rejects a seed whose direction is still an eigenvector
+of the Jacobian at the first accepted event, as for a decoupled variable. With
+`:auto` it then restarts from the observable direction; otherwise the result
+has status `:degenerate_tangent_seed`.
 """
 struct RealSaddleInitializer{O<:NamedTuple}
     options::O
@@ -20,15 +28,20 @@ function RealSaddleInitializer(;
     equilibrium_branch_check = u -> true,
     max_root_iterations = 30,
     tolerances = RealSaddleTolerances(1e-10, 1e-8, 1e-8, 1e-8, 1e-8, 1e-10, 1e-12, 1e-12),
+    tangent_seed = :auto,
 )
     launch_distance > 0 && isfinite(launch_distance) ||
         throw(ArgumentError("launch_distance must be finite and positive"))
     unstable_branch in (-1, 1) || throw(ArgumentError("unstable_branch must be 1 or -1"))
     max_root_iterations > 0 || throw(ArgumentError("max_root_iterations must be positive"))
+    tangent_seed in (:auto, :leading_stable) || tangent_seed isa Integer ||
+        tangent_seed isa AbstractVector{<:Real} || throw(ArgumentError(
+            "tangent_seed must be :auto, :leading_stable, a coordinate index, or a vector"))
+    tangent_seed isa AbstractVector && (tangent_seed = collect(float.(tangent_seed)))
     return RealSaddleInitializer((;
         equilibrium_guess = collect(float.(equilibrium_guess)), launch_distance,
         unstable_branch, unstable_reference, stable_reference, equilibrium_branch,
-        equilibrium_branch_check, max_root_iterations, tolerances,
+        equilibrium_branch_check, max_root_iterations, tolerances, tangent_seed,
     ))
 end
 
@@ -43,7 +56,7 @@ function _initialize_flow(system, initializer::RealSaddleInitializer, capture)
         equilibrium_branch = o.equilibrium_branch,
         equilibrium_branch_check = o.equilibrium_branch_check,
         unstable_reference = unstable, stable_reference = stable,
-        unstable_branch = o.unstable_branch,
+        unstable_branch = o.unstable_branch, tangent_seed = o.tangent_seed,
     )
 end
 
@@ -78,6 +91,15 @@ explicitly for those scans and check results under step refinement.
 
 `maximum_time` bounds elapsed integration time. A missing or ambiguous symbol
 produces an incomplete result, not a padded word. No user system is advanced.
+
+For real-saddle seeds, the first accepted event checks whether the seed
+direction `e` is still an eigenvector of the Jacobian `J` there,
+`‖J e - (e⋅J e) e‖ <= seed_invariance_tolerance * ‖J‖`. Such a direction
+spans an invariant subspace of the variational equation, so the tangent never
+leaves it and its signs carry no orientation information. An `:auto` seed is
+then replaced once by the observable direction projected normal to the flow;
+any other seed stops with status `:degenerate_tangent_seed`. Set
+`seed_invariance_tolerance=nothing` to skip the check.
 """
 struct FlowKneadingProblem{S,I,C,O,P<:NamedTuple}
     system::S
@@ -108,6 +130,7 @@ function FlowKneadingProblem(
     dt = 0.02,
     initial_event_tolerance = 1e-7,
     minimum_event_separation = 1e-7,
+    seed_invariance_tolerance = 1e-10,
 )
     transient_events isa Integer && transient_events >= 0 ||
         throw(ArgumentError("transient_events must be a nonnegative integer"))
@@ -125,6 +148,9 @@ function FlowKneadingProblem(
         (:minimum_event_separation, minimum_event_separation))
         isfinite(value) && value >= 0 || throw(ArgumentError("$name must be finite and nonnegative"))
     end
+    isnothing(seed_invariance_tolerance) ||
+        isfinite(seed_invariance_tolerance) && seed_invariance_tolerance >= 0 ||
+        throw(ArgumentError("seed_invariance_tolerance must be nothing or finite and nonnegative"))
     max_state > 0 || throw(ArgumentError("max_state must be positive"))
     maxiters isa Integer && maxiters > 0 || throw(ArgumentError("maxiters must be a positive integer"))
     n = length(_flow_context(system).u0)
@@ -140,6 +166,8 @@ function FlowKneadingProblem(
         dtmax = Float64(dtmax), maxiters = Int(maxiters), integration, dt = Float64(dt),
         initial_event_tolerance = Float64(initial_event_tolerance),
         minimum_event_separation = Float64(minimum_event_separation),
+        seed_invariance_tolerance = isnothing(seed_invariance_tolerance) ? nothing :
+            Float64(seed_invariance_tolerance),
     ))
 end
 
@@ -165,7 +193,9 @@ negative signs as zero, from left to right; lengths preserve leading zeros.
 Both codes are `-1` if `complete` is false. Recorded events and the valid word
 prefix remain available in incomplete results. `return_times` contains the
 elapsed times between successive recorded events. `initialization` retains
-the seed and `metadata` records independent parameters and solver settings.
+the seed and `metadata` records independent parameters and solver settings;
+`metadata.tangent_seed_fallback` is true when a degenerate `:auto` real-saddle
+seed was replaced by the observable direction.
 """
 struct FlowKneadingResult{I,M<:NamedTuple}
     raw_word::Vector{Int8}
@@ -207,6 +237,17 @@ function _word_tangent(ctx, u, v, t, tolerances)
     return tangent
 end
 
+_observable_direction(observable::CoordinateComponent, u, p, t) =
+    [i == observable.index ? 1.0 : 0.0 for i in eachindex(u)]
+_observable_direction(observable, u, p, t) = collect(Float64, observable(u, p, t))
+
+function _invariant_direction(ctx, u, t, direction, tolerance)
+    jacobian = ctx.J(u, ctx.p, t)
+    image = jacobian * direction
+    residual = image - dot(direction, image) * direction
+    return norm(residual) <= tolerance * norm(jacobian)
+end
+
 function _word_rk4_step(ctx, u, v, t, dt)
     k1u = ctx.f(u, ctx.p, t)
     k1v = ctx.J(u, ctx.p, t) * v
@@ -232,6 +273,23 @@ return raw and transition words with completeness and event diagnostics.
 function flow_kneading(problem::FlowKneadingProblem)
     ctx = _flow_context(problem.system)
     seed = _initialize_flow(problem.system, problem.initializer, problem.capture)
+    result = _flow_kneading(problem, ctx, seed, false)
+    if result.status === :degenerate_tangent_seed && seed.tangent_seed === :auto
+        u0 = collect(Float64, seed.u0)
+        direction = _observable_direction(problem.observable, u0, ctx.p, 0.0)
+        request = problem.observable isa CoordinateComponent ? problem.observable.index : direction
+        fallback = try
+            RealSaddleInitialization._reseed_tangent(seed, request, direction, ctx.f(u0, ctx.p, 0.0))
+        catch error
+            error isa DomainError || rethrow()
+            return result
+        end
+        result = _flow_kneading(problem, ctx, fallback, true)
+    end
+    return result
+end
+
+function _flow_kneading(problem, ctx, seed, tangent_seed_fallback)
     u = collect(Float64, seed.u0)
     n = length(u)
     length(ctx.u0) == n || throw(DimensionMismatch("seed state must match the system"))
@@ -249,11 +307,20 @@ function flow_kneading(problem::FlowKneadingProblem)
     status = Ref(:maximum_time)
     detail = Ref("")
     terminal_time = Ref(0.0)
+    check_seed = Ref(seed isa RealSaddleSeed && !isnothing(o.seed_invariance_tolerance))
 
     function record!(state, tangent, time)
         time - last_event[] > o.minimum_event_separation || return false
         _accept_event(ctx, problem.capture, state, time) || return false
         last_event[] = time
+        if check_seed[] && time > 0
+            check_seed[] = false
+            if _invariant_direction(ctx, state, time, seed.seed_direction, o.seed_invariance_tolerance)
+                status[] = :degenerate_tangent_seed
+                detail[] = "the tangent seed direction spans an invariant subspace of the variational equation"
+                return true
+            end
+        end
         seen[] += 1
         seen[] > o.transient_events || return false
         projected = _word_tangent(ctx, state, tangent, time, o.tolerances)
@@ -390,6 +457,7 @@ function flow_kneading(problem::FlowKneadingProblem)
         observable = problem.observable, options = o, accepted_events = seen[],
         initial_event_included = include_initial, terminal_time = terminal_time[],
         tangent_gauge = :accepted_step_flow_normal, detail = detail[],
+        tangent_seed_fallback,
     )
     return FlowKneadingResult(raw, transitions, raw_code, transition_code,
         length(raw), length(transitions), events, times, status[], complete, seed, metadata)

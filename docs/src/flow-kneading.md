@@ -53,13 +53,57 @@ Flow kneading requires a particular initial condition to be chosen; since partit
   Newton iteration, verifies that it has one real unstable direction, launches
   $\mathbf{x}(0)$ along a chosen branch of that direction, and constructs
   $\vec{v}(0)$ from the leading (i.e., weakest) stable direction by projecting it normal to the
-  flow and normalizing it.
+  flow and normalizing it. See [Choosing the tangent seed](#Choosing-the-tangent-seed)
+  for when this direction is a poor seed and how to choose another.
 - **[Saddle-focus initialization](#Saddle-focus-initialization):** `init_saddle_focus` selects a local seed
   ray from the intersection of the two-dimensional unstable spiral eigenspace
   with the tangent plane to a chosen extremum section. It integrates candidate
   seeds to successive extrema, solves for a critical point of the induced
   return map, and continues that point in a parameter using event-corrected
   sensitivities.
+
+### Choosing the tangent seed
+
+The leading stable eigenvector is a poor seed when it spans an invariant
+subspace of the tangent dynamics. The common case is a slow variable that does
+not feed back into the others, such as a gate $y$ with
+$\dot{y} = (y_\infty(V) - y)/\tau_y$ whose conductance is zero. If $1/\tau_y$
+is smaller than every other stable rate, the leading stable eigenvector is
+$\partial/\partial y$. The Jacobian column for $y$ is $-\partial/\partial y / \tau_y$
+everywhere, so $D\mathbf{f}\,\partial/\partial y = -\partial/\partial y / \tau_y$
+along the whole orbit, and $\vec{v}(t)$ stays along $y$ forever. Its
+component along any other observable is zero, or rounding error that grows by
+roughly one decade per return. The recorded signs $s_n$ are then noise, even
+when every sign clears the tolerance and the result reports `:complete`.
+
+To catch this, `flow_kneading` checks a real-saddle seed at the first accepted
+event. If the seed direction $e$ is still an eigenvector of the Jacobian there,
+$\|D\mathbf{f}\,e - (e \cdot D\mathbf{f}\,e)\,e\| \le
+\varepsilon\,\|D\mathbf{f}\|$ with $\varepsilon$ given by
+`seed_invariance_tolerance` (default `1e-10`), the seed is treated as
+degenerate. A direction that is an eigenvector only at the saddle passes the
+check: in the Lorenz example below, the leading stable direction is the $z$
+axis, but its Jacobian column $(0, -x, -\beta)$ couples it to $y$ away from the
+origin. Seeds given directly as `(u0 = ..., Q0 = ...)` are not checked.
+
+The `tangent_seed` option of `RealSaddleInitializer` and `init_real_saddle`
+controls the seed and the response to a degenerate one:
+
+| `tangent_seed` | Seed direction | If degenerate |
+|:--|:--|:--|
+| `:auto` (default) | Leading stable eigenvector | Restart once from the observable direction, e.g. $\partial/\partial z$ for `CoordinateComponent(3)`. `result.metadata.tangent_seed_fallback` is `true`. |
+| `:leading_stable` | Leading stable eigenvector | Stop with status `:degenerate_tangent_seed`. |
+| `i::Integer` | Coordinate direction $\partial/\partial x_i$ | Stop with status `:degenerate_tangent_seed`. |
+| a vector | That vector | Stop with status `:degenerate_tangent_seed`. |
+
+Every seed is projected normal to the launch flow and normalized.
+`seed.seed_direction` records the direction used before projection. The check
+detects only directions that are invariant to within the tolerance. If a slow
+variable feeds back weakly, the tangent can still take many returns to leave
+it. Compare words from
+two seeds, for example `tangent_seed = :auto` and a coordinate index, before
+trusting a scan. Set `seed_invariance_tolerance = nothing` in
+`FlowKneadingProblem` to disable the check.
 
 ## Integration
 `flow_kneading` and `init_saddle_focus` accept only a `CoupledODEs`. They read its rule and parameters, then integrate the state and tangent together as one augmented ODE, computing $D\mathbf{f}$ with ForwardDiff.
@@ -180,6 +224,9 @@ An incomplete result retains its valid word prefix but sets both integer
 codes to `-1`; missing symbols are never padded. `:maximum_time` means the
 time limit was reached, not that a return cannot occur. `:ambiguous_sign`
 means a sampled component was within the sign tolerance of zero.
+`:degenerate_tangent_seed` means an explicitly chosen real-saddle tangent seed
+spans an invariant direction; see
+[Choosing the tangent seed](#Choosing-the-tangent-seed).
 `:state_limit`, `:numerical_failure`, and `:integration_failure` report
 other reasons for stopping; `result.metadata.detail` provides additional
 details when available.

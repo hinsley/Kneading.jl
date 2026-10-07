@@ -96,6 +96,56 @@ end
     end
 end
 
+@testset "Real-saddle tangent seed options" begin
+    parameters = (
+        matrix = Matrix(Diagonal([2.0, -1.0, -3.0])),
+        equilibrium = [1.0, -2.0, 0.5],
+    )
+    system = CoupledODEs(linear_flow, zeros(3), parameters)
+    seed_with(tangent_seed) = init_real_saddle(
+        system,
+        [1.2, -1.7, 0.8],
+        0.1,
+        REAL_SADDLE_TOLERANCES;
+        max_root_iterations = 5,
+        equilibrium_branch = :primary,
+        equilibrium_branch_check = equilibrium -> true,
+        unstable_reference = [1.0, 0.0, 0.0],
+        stable_reference = [0.0, -1.0, 0.0],
+        tangent_seed,
+    )
+
+    default_seed = real_saddle_seed(system)
+    @test default_seed.tangent_seed === :auto
+    @test default_seed.seed_direction ≈ default_seed.leading_stable_direction
+
+    leading = seed_with(:leading_stable)
+    @test leading.tangent_seed === :leading_stable
+    @test vec(leading.Q0) ≈ vec(default_seed.Q0)
+
+    coordinate = seed_with(3)
+    @test coordinate.tangent_seed == 3
+    @test coordinate.seed_direction == [0.0, 0.0, 1.0]
+    @test vec(coordinate.Q0) ≈ [0.0, 0.0, 1.0]
+    @test coordinate.leading_stable_direction ≈ [0.0, -1.0, 0.0]
+
+    # The launch flow is along x, so the x part of a user vector is removed.
+    vector = seed_with([1.0, 0.0, 2.0])
+    @test vector.tangent_seed == [1.0, 0.0, 2.0]
+    @test vector.seed_direction ≈ [1.0, 0.0, 2.0] / sqrt(5.0)
+    @test vec(vector.Q0) ≈ [0.0, 0.0, 1.0]
+    @test vector.projected_tangent_norm ≈ 2 / sqrt(5.0)
+
+    @test_throws ArgumentError seed_with(:weakest)
+    @test_throws ArgumentError seed_with(0)
+    @test_throws ArgumentError seed_with(4)
+    @test_throws DimensionMismatch seed_with([1.0, 0.0])
+    @test_throws ArgumentError seed_with(zeros(3))
+    @test_throws ArgumentError seed_with([NaN, 0.0, 1.0])
+    # A seed along the launch flow has no flow-normal part.
+    @test_throws DomainError seed_with(1)
+end
+
 @testset "Real-saddle seed initializes tangent integration" begin
     parameters = (
         matrix = Matrix(Diagonal([2.0, -1.0, -3.0])),

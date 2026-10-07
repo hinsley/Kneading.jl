@@ -1,5 +1,6 @@
 """
-Initialization from the leading stable direction of a real saddle.
+Initialization from a real saddle, seeded by default from its leading stable
+direction.
 """
 module RealSaddleInitialization
 
@@ -77,7 +78,7 @@ function Base.showerror(io::IO, error::InvalidRealSaddleInitialState)
     )
 end
 
-struct _RealSaddleProblem{S, U, T, B, C, RU, RS}
+struct _RealSaddleProblem{S, U, T, B, C, RU, RS, TS}
     system::S
     initial_state::U
     launch_distance::T
@@ -87,11 +88,16 @@ struct _RealSaddleProblem{S, U, T, B, C, RU, RS}
     unstable_reference::RU
     stable_reference::RS
     unstable_branch::Int8
+    tangent_seed::TS
 end
 
 """
 Store the real-saddle equilibrium, spectrum, launch state, initial tangent, and
 all validation diagnostics returned by [`init_real_saddle`](@ref).
+
+`tangent_seed` is the requested seed (`:auto`, `:leading_stable`, a coordinate
+index, or a vector) and `seed_direction` is the unit vector that was projected
+normal to the launch flow to form `Q0`.
 """
 struct RealSaddleSeed{
     UI,
@@ -109,6 +115,8 @@ struct RealSaddleSeed{
     RU,
     RS,
     C,
+    TS,
+    SD,
 }
     initial_state::UI
     equilibrium::UE
@@ -133,6 +141,8 @@ struct RealSaddleSeed{
     stable_reference::RS
     unstable_branch::Int8
     tolerances::C
+    tangent_seed::TS
+    seed_direction::SD
 end
 
 function _problem(
@@ -145,6 +155,7 @@ function _problem(
     unstable_reference::AbstractVector{<:Real},
     stable_reference::AbstractVector{<:Real},
     unstable_branch::Integer,
+    tangent_seed,
 )
     system isa DynamicalSystemsBase.CoupledODEs || throw(ArgumentError(
         "system must be a CoupledODEs",
@@ -190,6 +201,7 @@ function _problem(
     applicable(equilibrium_branch_check, initial_state) || throw(ArgumentError(
         "equilibrium_branch_check must accept an equilibrium state",
     ))
+    seed = _tangent_seed_request(tangent_seed, dimension)
 
     state = collect(float.(initial_state))
     unstable = collect(float.(unstable_reference))
@@ -205,8 +217,50 @@ function _problem(
         unstable,
         stable,
         Int8(unstable_branch),
+        seed,
     )
 end
+
+function _tangent_seed_request(tangent_seed::Symbol, dimension)
+    tangent_seed in (:auto, :leading_stable) || throw(ArgumentError(
+        "tangent_seed must be :auto, :leading_stable, a coordinate index, or a vector",
+    ))
+    return tangent_seed
+end
+
+function _tangent_seed_request(tangent_seed::Integer, dimension)
+    1 <= tangent_seed <= dimension || throw(ArgumentError(
+        "the tangent_seed coordinate index is outside the state",
+    ))
+    return Int(tangent_seed)
+end
+
+function _tangent_seed_request(tangent_seed::AbstractVector{<:Real}, dimension)
+    length(tangent_seed) == dimension || throw(DimensionMismatch(
+        "tangent_seed must have one entry for each system dimension",
+    ))
+    all(isfinite, tangent_seed) || throw(ArgumentError(
+        "tangent_seed must be finite",
+    ))
+    norm(tangent_seed) > 0 || throw(ArgumentError(
+        "tangent_seed must have nonzero norm",
+    ))
+    return collect(float.(tangent_seed))
+end
+
+_tangent_seed_request(tangent_seed, dimension) = throw(ArgumentError(
+    "tangent_seed must be :auto, :leading_stable, a coordinate index, or a vector",
+))
+
+_seed_direction(::Symbol, leading_stable_direction) = copy(leading_stable_direction)
+
+function _seed_direction(index::Int, leading_stable_direction)
+    direction = zeros(eltype(leading_stable_direction), length(leading_stable_direction))
+    direction[index] = 1
+    return direction
+end
+
+_seed_direction(vector::AbstractVector, leading_stable_direction) = vector ./ norm(vector)
 
 function _system_flow(problem::_RealSaddleProblem, state)
     system = problem.system
@@ -468,19 +522,19 @@ function _orient_direction(direction, reference, tolerance)
     return oriented, abs(orientation_dot), unit_reference
 end
 
-function _initial_tangent(leading_stable_direction, launch_flow, tolerances)
+function _initial_tangent(seed_direction, launch_flow, tolerances)
     flow_norm = norm(launch_flow)
     flow_norm > tolerances.flow_norm || throw(DomainError(
         flow_norm,
         "the launch flow norm is too small",
     ))
-    tangent = leading_stable_direction .-
-        (dot(leading_stable_direction, launch_flow) / dot(launch_flow, launch_flow)) .*
+    tangent = seed_direction .-
+        (dot(seed_direction, launch_flow) / dot(launch_flow, launch_flow)) .*
         launch_flow
     projected_norm = norm(tangent)
     projected_norm > tolerances.projected_norm || throw(DomainError(
         projected_norm,
-        "the projected leading stable direction is too small",
+        "the projected tangent seed is too small",
     ))
     tangent ./= projected_norm
     return reshape(tangent, :, 1), flow_norm, projected_norm
@@ -498,11 +552,19 @@ end
         unstable_reference,
         stable_reference,
         unstable_branch=1,
+        tangent_seed=:auto,
     )
 
 Find and validate a real saddle from `initial_state`. Select deterministic
 unstable and leading stable eigendirections, launch on the selected unstable
 ray, and return the displaced state and one-column flow-normal tangent seed.
+
+`tangent_seed` selects the vector projected normal to the launch flow to form
+`Q0`: `:auto` or `:leading_stable` use the oriented leading stable
+eigenvector, an integer `i` uses the coordinate direction `e_i`, and a vector
+is used as given. The two symbols seed identically here; they differ in
+[`flow_kneading`](@ref Kneading.FlowKneading.flow_kneading), which replaces a
+degenerate `:auto` seed by the observable direction.
 """
 function init_real_saddle(
     system,
@@ -515,6 +577,7 @@ function init_real_saddle(
     unstable_reference::AbstractVector{<:Real},
     stable_reference::AbstractVector{<:Real},
     unstable_branch::Integer = 1,
+    tangent_seed = :auto,
 )
     problem = _problem(
         system,
@@ -526,6 +589,7 @@ function init_real_saddle(
         unstable_reference,
         stable_reference,
         unstable_branch,
+        tangent_seed,
     )
     equilibrium, equilibrium_residual, root_iterations =
         _solve_equilibrium(problem, tolerances)
@@ -558,8 +622,9 @@ function init_real_saddle(
     selected_unstable = problem.unstable_branch .* oriented_unstable
     u0 = equilibrium .+ problem.launch_distance .* selected_unstable
     launch_flow = _system_flow(problem, u0)
+    seed_direction = _seed_direction(problem.tangent_seed, oriented_stable)
     Q0, launch_flow_norm, projected_tangent_norm = _initial_tangent(
-        oriented_stable,
+        seed_direction,
         launch_flow,
         tolerances,
     )
@@ -591,7 +656,36 @@ function init_real_saddle(
         normalized_stable_reference,
         problem.unstable_branch,
         tolerances,
+        problem.tangent_seed,
+        seed_direction,
     )
+end
+
+"""
+Return a copy of `seed` whose tangent is formed from `direction`, requested as
+`tangent_seed`.
+"""
+function _reseed_tangent(seed::RealSaddleSeed, tangent_seed, direction, launch_flow)
+    seed_direction = collect(float.(direction)) ./ norm(direction)
+    Q0, _, projected_tangent_norm = _initial_tangent(
+        seed_direction,
+        launch_flow,
+        seed.tolerances,
+    )
+    replacements = (;
+        Q0,
+        projected_tangent_norm = convert(
+            typeof(seed.projected_tangent_norm),
+            projected_tangent_norm,
+        ),
+        tangent_seed,
+        seed_direction,
+    )
+    values = (
+        haskey(replacements, name) ? replacements[name] : getfield(seed, name)
+        for name in fieldnames(RealSaddleSeed)
+    )
+    return RealSaddleSeed(values...)
 end
 
 end
