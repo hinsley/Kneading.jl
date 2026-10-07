@@ -447,6 +447,31 @@ Both options use capped Newton corrections. If nearby guesses fail, scan
 $\rho$, bisect sign-changing intervals on a continuous, valid event branch,
 and Newton-correct the selected candidate.
 
+**Fall back to other event indices.** On a fresh start (no `previous`), a
+poorly chosen `initial_event_index` can leave no acceptable root of $g_M$ in
+`rho_range`, even though the critical point exists. The required launch
+radius shrinks by a factor $\exp(2\pi\lambda/|\omega|)$ for every extra
+revolution, so the same critical point is typically reachable from a
+neighbouring $M$ within the same range. With the default
+`event_index_fallback = true`, the initializer therefore retries the root
+solve at $M+1,\dots$ up to `maximum_event_index` (one less when
+`refine = true`, which needs one further index), then at $M-1,\dots,1$.
+For an index $M'$ the Newton guess is shifted to
+$\rho-(M'-M)\,2\pi\lambda/|\omega|$ before the scan. If every index fails
+and `fallback_rho_range` is supplied, the whole index sweep is repeated over
+that wider range, with `rho_samples` scaled to keep the same sampling
+density. Each failed attempt costs a full $\rho$ scan, which matters for slow
+spirals.
+
+`seed.diagnostics.root_event_index` and `seed.diagnostics.root_rho_range`
+record where the root solve succeeded, `root_fallback_used` reports whether
+a fallback was needed, and `failed_root_attempts` lists the attempts before
+it. When every attempt fails, the thrown error lists them in
+`diagnostics.attempts`. Continuation with `previous` never falls back, since
+switching index or range there could silently jump to a different branch;
+set `event_index_fallback = false` to disable the fallback on fresh starts
+too.
+
 To evaluate the derivatives, account for the change in event time with
 $\rho$. The tangent to the section hits is
 ```math
@@ -482,7 +507,7 @@ Pass the returned `SaddleFocusSeed` as `initializer` to a
 | `equilibrium`, `seed_direction`, `rho` | Corrected saddle-focus and final launch ray coordinate. |
 | `event_index` | Accepted $M$: the event count from the launch point to `u0`. |
 | `parameters`, `capture`, `critical_kind` | System parameter values used for this initialization, capture-event definition, and return-map extremum type. |
-| `diagnostics` | Criticality residual, state/tangent refinement errors, and event-transversality and coordinate-derivative checks. |
+| `diagnostics` | Criticality residual, state/tangent refinement errors, event-index fallback record, and event-transversality and coordinate-derivative checks. |
 
 The launch point $p(\rho)$ can be reconstructed by `equilibrium + exp(rho) * seed_direction`.
 The result stores an independent copy of the system parameter values,

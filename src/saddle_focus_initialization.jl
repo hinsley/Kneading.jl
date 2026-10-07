@@ -323,6 +323,33 @@ function _sf_find_root(ctx, capture, ray, guess, M, options; target=nothing, sca
     return roots[argmin(score.(roots))]
 end
 
+function _sf_initial_root(ctx, capture, ray, rho, M, options; target, fallback, last_index, fallback_rho_range)
+    indices = fallback ? vcat(M, M+1:last_index, M-1:-1:1) : [M]
+    ranges = fallback && !isnothing(fallback_rho_range) ? [options.rho_range, fallback_rho_range] : [options.rho_range]
+    revolution = 2pi * real(ray.eigenvalue) / abs(imag(ray.eigenvalue))
+    width(range) = range[2] - range[1]
+    attempts = NamedTuple[]
+    first_error = nothing
+    for rho_range in ranges, index in indices
+        rho_samples = max(options.rho_samples, ceil(Int, options.rho_samples * width(rho_range) / width(options.rho_range)))
+        attempt_options = merge(options, (; rho_range, rho_samples))
+        guess = rho - (index - M) * revolution
+        try
+            corrected = _sf_find_root(ctx, capture, ray, guess, index, attempt_options; target)
+            return (; corrected, event_index=index, rho_range, attempts)
+        catch error
+            error isa SaddleFocusInitializationError && error.stage in (:root, :branch) || rethrow()
+            isnothing(first_error) && (first_error = error)
+            push!(attempts, (; event_index=index, rho_range, stage=error.stage, message=error.message))
+        end
+    end
+    fallback || throw(first_error)
+    tried = isnothing(fallback_rho_range) ? "" : " over rho_range=$(options.rho_range) and fallback_rho_range=$fallback_rho_range"
+    throw(SaddleFocusInitializationError(first_error.stage,
+        "$(first_error.message) (also tried event indices $(join(indices, ", "))$tried)",
+        merge(first_error.diagnostics, (; attempts))))
+end
+
 function _sf_unit_tangent(ctx, event, options)
     tangent = copy(event.tangent)
     flow = collect(ctx.f(event.state, ctx.p, event.time))
@@ -350,6 +377,16 @@ saddle-focus. Return its full state `u0`, one-column unit flow-normal tangent
 `critical_kind` is `:minimum` or `:maximum` of the return map, independently of
 the captured extremum type. `initial_radius` and `initial_event_index` supply
 the first root guess. If correction fails, scan `rho_range` for candidate roots.
+
+On a fresh start (no `previous`), when neither correction nor the scan finds an
+acceptable root at `initial_event_index`, `event_index_fallback=true` retries the
+root solve at indices `initial_event_index+1` up to `maximum_event_index`
+(`maximum_event_index - 1` with `refine=true`), then downward to `1`. Each retry
+shifts the `rho` guess by one linearized revolution per index. If every index
+fails and `fallback_rho_range` is given, the index sweep is repeated over that
+range, with `rho_samples` scaled to keep the sampling density. Each failed
+attempt costs a full scan. Continuation with `previous` never falls back. The
+error raised when all attempts fail lists them in `diagnostics.attempts`.
 Use `critical_target` to select a particular critical state or return coordinate.
 When a target or `previous` result is supplied, require its distance from the
 corrected state, divided by `max(1, norm(target))`, to be at most
@@ -381,7 +418,10 @@ derivative and projected tangent. The equilibrium corrector uses
 search. An unsuccessful root solve or refinement throws
 [`SaddleFocusInitializationError`](@ref), carrying a failure stage and numerical
 diagnostics. Inspect `seed.diagnostics` for the accepted residual, refinement
-errors, derivative method, and target distance.
+errors, derivative method, and target distance. `root_event_index` and
+`root_rho_range` record the index and range at which the root solve succeeded
+before refinement, `root_fallback_used` whether that took a fallback, and
+`failed_root_attempts` the attempts that failed first.
 """
 function init_saddle_focus(system;
     previous=nothing,
@@ -407,6 +447,8 @@ function init_saddle_focus(system;
     max_bisection_iterations=_sf_previous_option(previous, :max_bisection_iterations, 60),
     rho_range=_sf_previous_option(previous, :rho_range, (-24.0, -1.0)),
     rho_samples=_sf_previous_option(previous, :rho_samples, 65),
+    event_index_fallback=_sf_previous_option(previous, :event_index_fallback, true),
+    fallback_rho_range=_sf_previous_option(previous, :fallback_rho_range, nothing),
     critical_target=isnothing(previous) ? nothing : previous.u0,
     branch_tolerance=_sf_previous_option(previous, :branch_tolerance, 0.25),
     minimum_radius=_sf_previous_option(previous, :minimum_radius, 1e-14),
@@ -440,6 +482,11 @@ function init_saddle_focus(system;
     isnothing(initial_rho) || isfinite(initial_rho) || throw(ArgumentError("initial_rho must be finite"))
     isfinite(initial_radius) && initial_radius > 0 || throw(ArgumentError("initial_radius must be positive and finite"))
     all(isfinite, rho_range) && rho_range[1] < rho_range[2] || throw(ArgumentError("rho_range must have finite increasing endpoints"))
+    event_index_fallback isa Bool || throw(ArgumentError("event_index_fallback must be a Bool"))
+    if !isnothing(fallback_rho_range)
+        length(fallback_rho_range) == 2 && all(isfinite, fallback_rho_range) && fallback_rho_range[1] < fallback_rho_range[2] ||
+            throw(ArgumentError("fallback_rho_range must have finite increasing endpoints"))
+    end
     for (name, value) in pairs((; criticality_tolerance, state_tolerance, tangent_tolerance, equilibrium_tolerance, event_tolerance, denominator_tolerance, eigenvalue_tolerance, finite_difference_step, max_newton_step, branch_tolerance, minimum_radius, max_time, max_state, abstol, reltol, dtmax))
         isfinite(value) && value > 0 || throw(ArgumentError("$name must be positive and finite"))
     end
@@ -461,8 +508,10 @@ function init_saddle_focus(system;
         max_newton_iterations, max_bisection_iterations, rho_range, rho_samples, branch_tolerance, minimum_radius,
         launch_guard_time, max_time, max_state, abstol, reltol, dtmax, maxiters, alg)
     rho = isnothing(initial_rho) ? (isnothing(previous) ? log(initial_radius) : previous.rho) : Float64(initial_rho)
-    M = Int(initial_event_index)
-    corrected = _sf_find_root(ctx, capture, ray, rho, M, options; target=critical_target)
+    root = _sf_initial_root(ctx, capture, ray, rho, Int(initial_event_index), options;
+        target=critical_target, fallback=isnothing(previous) && event_index_fallback,
+        last_index=refine ? maximum_event_index - 1 : maximum_event_index, fallback_rho_range)
+    M, corrected = root.event_index, root.corrected
     event = corrected.result.events[M]
     tangent = _sf_unit_tangent(ctx, event, options)
     if !isnothing(previous) && dot(tangent, vec(previous.Q0)) < 0
@@ -491,6 +540,9 @@ function init_saddle_focus(system;
         M, corrected, event, tangent = next_M, next_corrected, next_event, next_tangent
     end
     diagnostics = (; converged, root_converged=true, refinement_checked=refine,
+        initial_event_index=Int(initial_event_index), root_event_index=root.event_index,
+        root_rho_range=root.rho_range, root_fallback_used=!isempty(root.attempts),
+        failed_root_attempts=root.attempts,
         residual=corrected.result.residual,
         curvature=corrected.slope / event.derivative,
         derivative_method=newton_derivative, state_error, tangent_error,
@@ -509,8 +561,8 @@ function init_saddle_focus(system;
     configuration = (; newton_derivative, initial_radius, maximum_event_index, criticality_tolerance,
         state_tolerance, tangent_tolerance, equilibrium_tolerance, max_equilibrium_iterations,
         event_tolerance, denominator_tolerance, eigenvalue_tolerance, finite_difference_step,
-        max_newton_step, max_newton_iterations, max_bisection_iterations, rho_range, rho_samples, branch_tolerance,
-        minimum_radius, launch_guard_time, max_time, max_state, abstol, reltol, dtmax, maxiters, alg, refine)
+        max_newton_step, max_newton_iterations, max_bisection_iterations, rho_range, rho_samples,
+        event_index_fallback, fallback_rho_range, branch_tolerance, minimum_radius, launch_guard_time, max_time, max_state, abstol, reltol, dtmax, maxiters, alg, refine)
     return SaddleFocusSeed(copy(event.state), reshape(tangent, :, 1), copy(equilibrium),
         copy(ray.direction), corrected.result.rho, M, deepcopy(ctx.p), capture,
         critical_kind, diagnostics, configuration)
