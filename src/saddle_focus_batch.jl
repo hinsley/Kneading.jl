@@ -116,7 +116,11 @@ function _sf_search_update!(search, points, entry)
             search.previous = point
         end
         search.next_sample += search.window
-        if search.start + search.next_sample * search.step > search.upper
+        resolvable = filter(point -> point.message != _SF_BATCH_MESSAGES[2], points)
+        if !isempty(resolvable) && !any(point -> point.valid, resolvable)
+            search.status = :failed
+            search.message = "no $(kind) critical point was found at event index $(search.M) before the seeded trajectories stopped returning (rho=$(round(resolvable[1].rho; digits=4)): $(resolvable[1].message))"
+        elseif search.start + search.next_sample * search.step > search.upper
             search.status = :failed
             search.message = "no $(kind) critical point was found between rho=$(round(search.start; digits=4)) and rho_range[2]=$(search.upper) at event index $(search.M); adjust initial_radius, initial_event_index, or rho_samples"
         end
