@@ -5,3 +5,4 @@
 /output/rossler-*.tsv
 /output/figures/rossler-flow-kneading-*.png
 /output/preview-figures/
+/examples/__pycache__/
