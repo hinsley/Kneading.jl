@@ -75,3 +75,56 @@ Run the checked-in reference fixtures independently with:
 ```sh
 julia --project=. examples/verify_rossler_reference.jl
 ```
+
+## Leech heart interneuron flow kneading
+
+`leech_heart_interneuron_kneading.jl` scans the reduced leech heart
+interneuron model of Channell, Cymbalyuk and Shilnikov,
+[PRL 98, 134101 (2007)](https://doi.org/10.1103/PhysRevLett.98.134101), with an
+applied current $I_\mathrm{app}$ (nA) added to the voltage equation:
+
+$$
+\begin{aligned}
+0.5\,\dot V &= I_\mathrm{app} - 200 f(-150, 0.0305, V)^3 h (V - 0.045)
+  - 30 m^2 (V + 0.07) - 8 (V + 0.046),\\
+\dot h &= 24.69 \left(f(500, 0.0333, V) - h\right),\\
+\dot m &= 4 \left(f(-83, 0.018 + V_{K2}^\mathrm{shift}, V) - m\right),
+\end{aligned}
+$$
+
+with $f(a, b, V) = 1/(1 + e^{a(b + V)})$, $V$ in volts and time in seconds.
+At $I_\mathrm{app} = 0$ it reproduces the published bursts with three spikes at
+$V_{K2}^\mathrm{shift} = -0.021$, two at $-0.016$, and tonic spiking at $-0.012$.
+
+The plane is $(V_{K2}^\mathrm{shift}, I_\mathrm{app})$. The shift drives the
+homoclinic spike-adding cascade; the current moves the equilibrium through a
+fold (three equilibria below about $-10$ pA) and an Andronov–Hopf bifurcation.
+Two orbits are followed at every point, with events at minima of $m$:
+
+- the unstable manifold of the depolarized saddle-focus, from
+  `SaddleFocusInitializer` with continuation across the plane;
+- below the fold, the separatrix of the middle real saddle toward spiking, from
+  `RealSaddleInitializer`. It spikes and then rests, so its word is incomplete;
+  the number of events before rest and the longest return time locate
+  homoclinic orbits of the saddle.
+
+Run a small scan on the CPU, then plot:
+
+```sh
+LEECH_RESOLUTION=16 julia --project=. examples/leech_heart_interneuron_kneading.jl
+julia --project=examples examples/plot_leech_heart_interneuron.jl output/leech-heart-interneuron
+```
+
+`LEECH_SHIFT` and `LEECH_CURRENT` set the ranges, for example
+`LEECH_SHIFT=-0.028,-0.008` and `LEECH_CURRENT=-0.03,0.05`. On a GPU, call
+`main(backend = CUDABackend())` after `using CUDA`.
+`leech_heart_interneuron_kaggle.py` packages the package source and this
+script as a private Kaggle kernel for a T4:
+
+```sh
+python3 examples/leech_heart_interneuron_kaggle.py <user> leech-scan \
+    --env LEECH_RESOLUTION=128 LEECH_SHIFT=-0.028,-0.008 LEECH_CURRENT=-0.03,0.05
+kaggle kernels push -p output/kaggle
+```
+
+![Leech heart interneuron kneading diagram](leech_heart_interneuron_kneading.png)
