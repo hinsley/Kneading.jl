@@ -76,7 +76,8 @@ end
     system = CoupledODEs(lorenz, zeros(3), [10.0, 28.0, 8 / 3])
     initializer = RealSaddleInitializer(equilibrium_guess = zeros(3))
     for options in ((; maximum_time = 5.0), (; max_state = 30.0), (; transient_events = 3),
-        (; maxiters = 300), (; word_length = 70, maximum_time = 300.0))
+        (; maxiters = 300), (; word_length = 70, maximum_time = 300.0),
+        (; word_length = 127, maximum_time = 600.0))
         problem = FlowKneadingProblem(system; initializer, capture = LocalMaximum(3),
             integration = :rk4, dt = 0.01, options...)
         cpu = flow_kneading(problem)
