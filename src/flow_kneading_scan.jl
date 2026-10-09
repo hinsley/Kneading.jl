@@ -25,6 +25,11 @@ struct FlowKneadingDiagram{P,M}
 end
 
 function _scan_initialize(system, initializer::SaddleFocusInitializer, capture, previous)
+    if _sf_first_selection(initializer)
+        options = merge(initializer.options, (; capture))
+        isnothing(previous) && return init_saddle_focus(system; options...)
+        return init_saddle_focus(system; options..., equilibrium_guess = previous.equilibrium)
+    end
     options = merge(initializer.options, (; capture, previous))
     if !isnothing(previous)
         options = merge(options, (; equilibrium_guess = previous.equilibrium,
@@ -35,6 +40,13 @@ end
 
 _scan_initialize(system, initializer, capture, previous) =
     _initialize_flow(system, initializer, capture)
+
+struct _SaddleFocusAnchor{I}
+    initializer::I
+end
+
+_scan_initialize(system, anchor::_SaddleFocusAnchor, capture, previous) =
+    _sf_scan_entry(system, anchor.initializer, capture, isnothing(previous) ? nothing : previous.ray.equilibrium)
 
 function _try_scan_initialize(system, initializer, capture, previous, on_error)
     try
@@ -106,6 +118,14 @@ With a KernelAbstractions `backend`, every point is first initialized on the CPU
 with the same continuation, and all words are then integrated together on the
 device, as in the vector method of [`flow_kneading`](@ref). This requires
 `integration=:rk4`; `precision` is passed on as well.
+
+With `SaddleFocusInitializer(...; selection=:first)` every point is seeded on its
+own at the first turning point of the return map met outward from the
+saddle-focus (see [`init_saddle_focus`](@ref)); only the equilibrium guess is
+continued between neighbors. With a `backend`, this seeding also runs on the
+device: the plane's equilibria and seed rays are found on the CPU, and the
+return-map slope is evaluated for all points and launch radii together with
+fixed-step RK4 at the problem's `dt`.
 """
 function scan_flow_kneading(
     builder,

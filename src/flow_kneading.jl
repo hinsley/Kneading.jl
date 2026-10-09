@@ -101,5 +101,6 @@ include("saddle_focus_initialization.jl")
 include("flow_words.jl")
 include("flow_kneading_scan.jl")
 include("flow_kneading_batch.jl")
+include("saddle_focus_batch.jl")
 
 end

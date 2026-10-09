@@ -1,15 +1,16 @@
 """
 Kneading.jl's optional KernelAbstractions extension. It loads only when
 KernelAbstractions is available and runs batched flow-kneading word integration
-on any KernelAbstractions backend, such as `CPU()` or `CUDABackend()`.
+and saddle-focus seeding on any KernelAbstractions backend, such as `CPU()` or
+`CUDABackend()`.
 """
 module KneadingKernelAbstractionsExt
 
 using KernelAbstractions
 using StaticArrays: SVector
-using Kneading.FlowKneading: _batch_word
+using Kneading.FlowKneading: _batch_word, _batch_sf_evaluate
 
-import Kneading.FlowKneading: _launch_flow_words
+import Kneading.FlowKneading: _launch_flow_words, _launch_saddle_focus
 
 @kernel function _flow_word_kernel!(bits, lengths, statuses, accepted, terminal_times, events,
     rule, options, @Const(parameters), @Const(states), @Const(tangents), @Const(directions), @Const(flags))
@@ -21,6 +22,11 @@ import Kneading.FlowKneading: _launch_flow_words
     statuses[i] = word[3]
     accepted[i] = word[4] % Int32
     terminal_times[i] = word[5]
+end
+
+@kernel function _saddle_focus_kernel!(evaluations, rule, options, @Const(items))
+    i = @index(Global)
+    evaluations[i] = _batch_sf_evaluate(rule, options, items[i])
 end
 
 function _device(backend, values)
@@ -76,6 +82,22 @@ function _launch_flow_words(backend::Backend, rule, options, parameters,
         end
     end
     return outputs
+end
+
+function _launch_saddle_focus(backend::Backend, rule, options, items::AbstractVector, ::Type{E};
+    chunk_size = 2^20, workgroup_size = nothing) where {E}
+    count = length(items)
+    evaluations = Vector{E}(undef, count)
+    groups = something(workgroup_size, backend isa CPU ? 1 : 64)
+    kernel! = _saddle_focus_kernel!(backend, groups)
+    for start in 1:chunk_size:count
+        range = start:min(start + chunk_size - 1, count)
+        output = KernelAbstractions.allocate(backend, E, length(range))
+        kernel!(output, rule, options, _device(backend, items[range]); ndrange = length(range))
+        KernelAbstractions.synchronize(backend)
+        evaluations[range] .= Array(output)
+    end
+    return evaluations
 end
 
 end

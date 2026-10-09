@@ -153,3 +153,48 @@ end
     @test isempty(flow_kneading(FlowKneadingProblem[]; backend = CPU()))
     @test only(flow_kneading([problem(lorenz)])).complete
 end
+
+@testset "Batched first saddle-focus seeds" begin
+    rossler(u, p, t) = SVector(-u[2] - u[3], u[1] + p[1] * u[2], 0.3 * u[1] + u[3] * (u[1] - p[2]))
+    builder = (c, a) -> CoupledODEs(rossler, zeros(3), [a, c])
+    plane = ParameterPlane([5.0, 5.5], [0.30, 0.32]; xname = "c", yname = "a")
+    options = (; equilibrium_guess = zeros(3), critical_kind = :minimum, selection = :first,
+        initial_radius = 0.3, rho_samples = 32)
+    settings = (; initializer = SaddleFocusInitializer(; options...), capture = LocalMinimum(2),
+        word_length = 12, maximum_time = 2000.0, integration = :rk4, dt = 0.01)
+    device = scan_flow_kneading(builder, plane; settings..., backend = CPU(), store_results = true)
+    cpu = scan_flow_kneading(builder, plane; settings..., store_results = true)
+    @test all(==(:complete), device.statuses)
+    @test all(==(:complete), cpu.statuses)
+    for c in CartesianIndices(device.statuses)
+        seed = device.results[c].initialization
+        system = builder(plane.x[c[2]], plane.y[c[1]])
+        reference = init_saddle_focus(system; capture = LocalMinimum(2), equilibrium_guess = zeros(3),
+            critical_kind = :minimum, initial_rho = seed.rho, initial_event_index = seed.event_index,
+            refine = false, event_index_fallback = false)
+        @test seed.diagnostics.converged
+        @test seed.diagnostics.selection === :first
+        @test abs(seed.diagnostics.residual) <= 1e-8
+        @test seed.rho ≈ reference.rho atol = 1e-7
+        @test seed.u0 ≈ reference.u0 atol = 1e-7
+        @test seed.Q0 ≈ reference.Q0 atol = 1e-7
+        adaptive = cpu.results[c].initialization
+        @test adaptive.event_index == seed.event_index
+        @test adaptive.u0 ≈ seed.u0 atol = 1e-7
+        @test adaptive.Q0 ≈ seed.Q0 atol = 1e-7
+        @test device.results[c].transition_word[2:end] == cpu.results[c].transition_word[2:end]
+    end
+    problems = [FlowKneadingProblem(builder(c, 0.3); settings...) for c in plane.x]
+    batched = flow_kneading(problems; backend = CPU())
+    @test [r.initialization.u0 for r in batched] == [device.results[1, j].initialization.u0 for j in eachindex(plane.x)]
+    mixed = flow_kneading(problems; backend = CPU(), precision = Float32)
+    @test all(k -> isapprox(mixed[k].initialization.u0, batched[k].initialization.u0; atol = 1e-5), eachindex(batched))
+    narrow = SaddleFocusInitializer(; options..., rho_range = (-24.0, -3.0))
+    unfound = scan_flow_kneading(builder, plane; settings..., initializer = narrow, backend = CPU())
+    @test all(==(:initialization_failed), unfound.statuses)
+    @test all(message -> occursin("no minimum critical point", message), unfound.errors)
+    @test_throws SaddleFocusInitializationError flow_kneading(
+        [FlowKneadingProblem(builder(5.0, 0.3); settings..., initializer = narrow)]; backend = CPU())
+    @test_throws ArgumentError flow_kneading([FlowKneadingProblem(builder(5.0, 0.3); settings...,
+        integration = :adaptive)]; backend = CPU())
+end

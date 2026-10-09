@@ -792,6 +792,69 @@ device_diagram = scan_flow_kneading(
 The result is an ordinary `FlowKneadingDiagram` for `write_flow_scan` and
 plotting; `store_results = true` also keeps each point's events.
 
+### Seeding saddle-focus critical points on the device
+
+Continuation makes each point wait for its neighbour, so it stays on CPU
+threads, and for slow or spike-adding flows it dominates the cost of a scan.
+`selection = :first` instead seeds every point on its own, at the first
+turning point of the requested kind met when moving outward along the seed ray
+from the saddle-focus. A device `backend` then seeds the whole plane together:
+
+```julia
+first_diagram = scan_flow_kneading(
+    (c, a) -> CoupledODEs(rossler_static, zeros(3), [a, c]),
+    plane;
+    initializer = SaddleFocusInitializer(
+        equilibrium_guess = zeros(3),
+        critical_kind = :minimum,
+        selection = :first,
+        initial_radius = 0.3,
+    ),
+    capture = LocalMinimum(2),
+    word_length = 7,
+    max_state = 1e6,
+    integration = :rk4,
+    dt = 0.02,
+    backend = CPU(),
+)
+```
+
+The equilibria and seed rays are found on the CPU, continuing only the
+equilibrium guess between neighbours. Write $\mathrm{rev}=2\pi\lambda/\omega$
+for the growth of $\rho$ per revolution and $M$ for `initial_event_index`. For
+every point, the device integrates the trajectory and its sensitivity from many
+launch radii at once, by the fixed-step RK4 of the words at the problem's `dt`,
+and returns $g_M$ and the event-time-corrected tangents $w_M$, $w_{M+1}$. The
+event times $M$ and $M+1$ are refined by Newton steps on a partial RK4 step, so
+the seed lies on the section. The search for $\rho$ starts at
+$\log(\texttt{initial\_radius})-M\,\mathrm{rev}$, where the $M$th extremum lies
+about `initial_radius` from the saddle-focus, which should still be in the
+linear part of the spiral (there $g_M\approx e^{\mathrm{rev}}$). It samples
+`rho_samples` launch radii per revolution, one revolution per device launch,
+until $g_M$ changes sign in the direction of `critical_kind` with
+$\partial_\rho Y_M$ of fixed sign, or until $\rho$ passes `rho_range[2]`. Each
+further launch evaluates seven equally spaced interior points and the secant
+point of every bracket, so a few launches reach `criticality_tolerance`. With
+`refine = true` the search also runs at $M+1$ in the same launches and must reach
+the same state and tangent. Points without such a turning point are recorded as
+`:initialization_failed` with the reason.
+
+`flow_kneading(problems; backend)` seeds problems with such an initializer in the
+same way. `init_saddle_focus(system; selection = :first, ...)`, and a scan
+without a `backend`, apply the same rule on the CPU with adaptive integration,
+which is useful for checking a few points. `seed.diagnostics.integration`
+records how a seed was computed, and `precision = Float32` applies to the
+seeding as to the words.
+
+Within the bracket the first sign change is kept, so the rule does not depend
+on neighbouring points, but a pair of turning points closer than one sample
+spacing is missed; increase `rho_samples` where turning points are born in pairs.
+The first sign of a word is taken at the critical point, where the next return
+has zero slope. The image of the tangent there almost vanishes, so its direction
+at the next event, and the raw signs after it, can flip between two seeds that
+agree to many digits; the transition word after its first symbol does not
+change.
+
 Code that runs on the device must compile there:
 
 - The rule is out of place, returns an `SVector`, and accepts ForwardDiff dual

@@ -2,7 +2,9 @@
     SaddleFocusInitializer(; kwargs...)
 
 Configure saddle-focus critical-point initialization for a flow-kneading scan.
-Keywords are passed to [`init_saddle_focus`](@ref).
+Keywords are passed to [`init_saddle_focus`](@ref). With `selection=:first`,
+each parameter point is seeded independently at the first turning point met
+outward from the saddle-focus, and a device `backend` seeds all points together.
 """
 struct SaddleFocusInitializer{K<:NamedTuple}
     options::K
@@ -414,6 +416,23 @@ guards event transversality and `denominator_tolerance` guards the coordinate
 derivative and projected tangent. The equilibrium corrector uses
 `equilibrium_tolerance` and `max_equilibrium_iterations`.
 
+`selection=:first` replaces the guess, correction, and scan above by a search
+for the first turning point of the requested `critical_kind` met when moving
+outward along the seed ray. With `rev = 2pi*lambda/omega`, the launch coordinate
+`rho` starts at `log(initial_radius) - M*rev` for `M = initial_event_index`, so
+that the `M`th extremum lies about `initial_radius` from the saddle-focus, which
+should still be in the linear regime of the spiral (or at `initial_rho` when
+given). It is sampled at `rho_samples` points per revolution, one revolution at a
+time, until `g_M` changes sign in the direction of the requested kind with
+`dY_M` of fixed sign, or until `rho` exceeds `rho_range[2]`. The bracket is then
+shrunk by evaluating seven equally spaced interior points and the secant point at
+a time, until `abs(g_M) <= criticality_tolerance` or the bracket is narrower
+than `criticality_tolerance`. With `refine=true`, the same search at `M + 1`
+must reach the same state and tangent. No continuation or `previous` result is
+used, so each parameter point is independent; `event_index_fallback` does not
+apply. This is the rule that a device `backend` in [`flow_kneading`](@ref) and
+[`scan_flow_kneading`](@ref) evaluates for many points at once.
+
 `max_time`, `max_state`, `minimum_radius`, and `maximum_event_index` bound the
 search. An unsuccessful root solve or refinement throws
 [`SaddleFocusInitializationError`](@ref), carrying a failure stage and numerical
@@ -423,7 +442,9 @@ errors, derivative method, and target distance. `root_event_index` and
 before refinement, `root_fallback_used` whether that took a fallback, and
 `failed_root_attempts` the attempts that failed first.
 """
-function init_saddle_focus(system;
+init_saddle_focus(system; kwargs...) = _init_saddle_focus(_sf_settings(system; kwargs...))
+
+function _sf_settings(system;
     previous=nothing,
     equilibrium_guess=isnothing(previous) ? nothing : previous.equilibrium,
     capture=isnothing(previous) ? LocalMinimum(2) : previous.capture,
@@ -461,12 +482,14 @@ function init_saddle_focus(system;
     maxiters=_sf_previous_option(previous, :maxiters, 10_000_000),
     alg=_sf_previous_option(previous, :alg, Tsit5()),
     refine=_sf_previous_option(previous, :refine, true),
+    selection=_sf_previous_option(previous, :selection, :continuation),
 )
     isnothing(previous) || previous isa SaddleFocusSeed || throw(ArgumentError("previous must be a SaddleFocusSeed"))
     isnothing(equilibrium_guess) && throw(ArgumentError("equilibrium_guess is required for the first initialization"))
     capture isa Union{LocalMaximum,LocalMinimum} || throw(ArgumentError("capture must be LocalMaximum or LocalMinimum"))
     critical_kind in (:minimum, :maximum) || throw(ArgumentError("critical_kind must be :minimum or :maximum"))
     newton_derivative in (:finite_difference, :second_order_sensitivity) || throw(ArgumentError("newton_derivative must be :finite_difference or :second_order_sensitivity"))
+    selection in (:continuation, :first) || throw(ArgumentError("selection must be :continuation or :first"))
     1 <= initial_event_index <= maximum_event_index || throw(ArgumentError("require 1 <= initial_event_index <= maximum_event_index"))
     initial_event_index isa Integer && maximum_event_index isa Integer || throw(ArgumentError("event indices must be integers"))
     rho_samples isa Integer && rho_samples >= 2 || throw(ArgumentError("rho_samples must be an integer of at least two"))
@@ -501,12 +524,33 @@ function init_saddle_focus(system;
             all(isfinite, critical_target) || throw(ArgumentError("critical_target must be finite"))
         end
     end
-    equilibrium = _sf_equilibrium(ctx, equilibrium_guess; tolerance=equilibrium_tolerance, max_iterations=max_equilibrium_iterations)
-    ray = _sf_seed_ray(ctx, equilibrium, capture; eigenvalue_tolerance)
     options = (; critical_kind, newton_derivative, criticality_tolerance, state_tolerance, tangent_tolerance,
         event_tolerance, denominator_tolerance, finite_difference_step, max_newton_step,
         max_newton_iterations, max_bisection_iterations, rho_range, rho_samples, branch_tolerance, minimum_radius,
         launch_guard_time, max_time, max_state, abstol, reltol, dtmax, maxiters, alg)
+    configuration = (; newton_derivative, initial_radius, maximum_event_index, criticality_tolerance,
+        state_tolerance, tangent_tolerance, equilibrium_tolerance, max_equilibrium_iterations,
+        event_tolerance, denominator_tolerance, eigenvalue_tolerance, finite_difference_step,
+        max_newton_step, max_newton_iterations, max_bisection_iterations, rho_range, rho_samples,
+        event_index_fallback, fallback_rho_range, branch_tolerance, minimum_radius, launch_guard_time, max_time, max_state, abstol, reltol, dtmax, maxiters, alg, refine, selection)
+    return (; ctx, previous, equilibrium_guess, capture, critical_kind, newton_derivative, initial_radius,
+        initial_rho, initial_event_index=Int(initial_event_index), maximum_event_index=Int(maximum_event_index),
+        equilibrium_tolerance, max_equilibrium_iterations, eigenvalue_tolerance, event_index_fallback,
+        fallback_rho_range, critical_target, branch_tolerance, refine, selection, options, configuration)
+end
+
+function _sf_anchor(s)
+    equilibrium = _sf_equilibrium(s.ctx, s.equilibrium_guess; tolerance=s.equilibrium_tolerance, max_iterations=s.max_equilibrium_iterations)
+    return _sf_seed_ray(s.ctx, equilibrium, s.capture; eigenvalue_tolerance=s.eigenvalue_tolerance)
+end
+
+function _init_saddle_focus(s)
+    s.selection === :first && return _sf_first_initialize(s)
+    (; ctx, previous, capture, critical_kind, newton_derivative, initial_radius, initial_rho, initial_event_index,
+        maximum_event_index, event_index_fallback, fallback_rho_range, critical_target, branch_tolerance,
+        refine, options, configuration) = s
+    ray = _sf_anchor(s)
+    equilibrium = ray.equilibrium
     rho = isnothing(initial_rho) ? (isnothing(previous) ? log(initial_radius) : previous.rho) : Float64(initial_rho)
     root = _sf_initial_root(ctx, capture, ray, rho, Int(initial_event_index), options;
         target=critical_target, fallback=isnothing(previous) && event_index_fallback,
@@ -533,7 +577,7 @@ function init_saddle_focus(system;
         tangent_error = norm(next_tangent - tangent)
         refinement_steps += 1
         total_iterations += next_corrected.iterations
-        if state_error <= state_tolerance && tangent_error <= tangent_tolerance
+        if state_error <= options.state_tolerance && tangent_error <= options.tangent_tolerance
             converged = true
             break
         end
@@ -558,11 +602,6 @@ function init_saddle_focus(system;
     if refine && !converged
         throw(SaddleFocusInitializationError(:refinement, "state and tangent did not converge before maximum_event_index=$maximum_event_index", diagnostics))
     end
-    configuration = (; newton_derivative, initial_radius, maximum_event_index, criticality_tolerance,
-        state_tolerance, tangent_tolerance, equilibrium_tolerance, max_equilibrium_iterations,
-        event_tolerance, denominator_tolerance, eigenvalue_tolerance, finite_difference_step,
-        max_newton_step, max_newton_iterations, max_bisection_iterations, rho_range, rho_samples,
-        event_index_fallback, fallback_rho_range, branch_tolerance, minimum_radius, launch_guard_time, max_time, max_state, abstol, reltol, dtmax, maxiters, alg, refine)
     return SaddleFocusSeed(copy(event.state), reshape(tangent, :, 1), copy(equilibrium),
         copy(ray.direction), corrected.result.rho, M, deepcopy(ctx.p), capture,
         critical_kind, diagnostics, configuration)

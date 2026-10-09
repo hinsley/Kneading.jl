@@ -376,9 +376,11 @@ Without a `backend`, each problem is solved by `flow_kneading(problem)`, across
 threads when `threaded`.
 
 With a KernelAbstractions backend, such as `CPU()` or `CUDABackend()`, the
-initializers still run on the CPU, and all words are then integrated together on
-the device by the `integration = :rk4` method; the problems must select it and
-share their rule, capture, observable, and options. This requires
+initializers run on the CPU, except `SaddleFocusInitializer(...; selection=:first)`,
+whose seeds are searched for all problems together on the device; a problem
+without such a seed throws its `SaddleFocusInitializationError`. All words are
+then integrated together on the device by the `integration = :rk4` method; the
+problems must select it and share their rule, capture, observable, and options. This requires
 `using KernelAbstractions`, an out-of-place rule returning an `SVector`, and real
 parameter vectors (or an isbits parameter value). The rule, the capture's
 `accept`, and a function observable run on the device with
@@ -406,13 +408,24 @@ function flow_kneading(problems::AbstractArray{<:FlowKneadingProblem};
     end
     isempty(items) && return reshape(FlowKneadingResult[], size(problems))
     seeds = Vector{Any}(undef, length(items))
+    searched = filter(k -> _sf_first_selection(items[k].initializer), eachindex(items))
+    others = setdiff(eachindex(items), searched)
     initialize(k) = seeds[k] = _initialize_flow(items[k].system, items[k].initializer, items[k].capture)
     if parallel
-        Threads.@threads :dynamic for k in eachindex(items)
+        Threads.@threads :dynamic for k in others
             initialize(k)
         end
     else
-        foreach(initialize, eachindex(items))
+        foreach(initialize, others)
+    end
+    if !isempty(searched)
+        all(k -> items[k].options.integration === :rk4, searched) || throw(ArgumentError(
+            "a device backend integrates with fixed-step RK4; set integration = :rk4 and dt"))
+        entries = [_sf_scan_entry(items[k].system, items[k].initializer, items[k].capture, nothing) for k in searched]
+        for (k, outcome) in zip(searched, _sf_batch_seeds(entries, backend, precision, items[searched[1]].options.dt))
+            outcome isa Exception && throw(outcome)
+            seeds[k] = outcome
+        end
     end
     return reshape(_flow_kneading_batch(items, seeds, backend, precision, true), size(problems))
 end
@@ -434,10 +447,24 @@ function _scan_flow_kneading_batch(builder, plane, initializer, capture, observa
     results = Matrix{Any}(nothing, dims...)
     problems = Matrix{Any}(nothing, dims...)
     seeds = Matrix{Any}(nothing, dims...)
+    anchors = Matrix{Any}(nothing, dims...)
     progress_lock = ReentrantLock()
+    searched = _sf_first_selection(initializer)
+    report(i, j, result) = isnothing(progress) || lock(() -> progress(i, j, result), progress_lock)
 
     function visit(i, j, previous)
         system = builder(plane.x[j], plane.y[i])
+        if searched
+            anchor, message = _try_scan_initialize(system, _SaddleFocusAnchor(initializer), capture, previous, on_error)
+            if isnothing(anchor)
+                statuses[i, j] = :initialization_failed
+                errors[i, j] = message
+                report(i, j, nothing)
+                return previous
+            end
+            anchors[i, j] = anchor
+            return anchor
+        end
         seed, message = _try_scan_initialize(system, initializer, capture, previous, on_error)
         if isnothing(seed)
             statuses[i, j] = :initialization_failed
@@ -456,6 +483,25 @@ function _scan_flow_kneading_batch(builder, plane, initializer, capture, observa
     end
 
     parallel = _continuation_sweep(visit, dims, threaded)
+    anchored = findall(!isnothing, anchors)
+    if !isempty(anchored)
+        template = FlowKneadingProblem(anchors[first(anchored)].system; initializer, capture, observable, kwargs...)
+        template.options.integration === :rk4 || throw(ArgumentError(
+            "a device backend integrates with fixed-step RK4; set integration = :rk4 and dt"))
+        outcomes = _sf_batch_seeds([anchors[c] for c in anchored], backend, precision, template.options.dt)
+        for (c, seed) in zip(anchored, outcomes)
+            if seed isa Exception
+                on_error === :throw && throw(seed)
+                statuses[c] = :initialization_failed
+                errors[c] = sprint(showerror, seed)
+                report(c[1], c[2], nothing)
+                continue
+            end
+            problems[c] = FlowKneadingProblem(anchors[c].system; initializer = seed, capture, observable, kwargs...)
+            seeds[c] = seed
+            _record_scan_seed!(critical_states, critical_residuals, critical_rhos, event_indices, c[1], c[2], seed)
+        end
+    end
     initialized = findall(!isnothing, seeds)
     if !isempty(initialized)
         batch = _flow_kneading_batch([problems[c] for c in initialized],
