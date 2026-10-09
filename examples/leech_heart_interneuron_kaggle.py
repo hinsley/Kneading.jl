@@ -42,7 +42,11 @@ env = dict(os.environ)
 env.update(ENV)
 env["LEECH_OUTPUT"] = WORK + "/leech-heart-interneuron"
 script = ROOT + "/examples/leech_heart_interneuron_kneading.jl"
-call = "main()" if env.get("LEECH_DEVICE") == "cpu" else "main(backend = CUDABackend())"
+call = "main()" if env.get("LEECH_DEVICE") == "cpu" else (
+    "focus, = main(backend = CUDABackend()); "
+    "problems = [FlowKneadingProblem(leech(r.metadata.parameters...); initializer = r.initialization, settings...) "
+    "for r in focus.results if !isnothing(r)]; "
+    "println(\"Device words alone: \", @elapsed(flow_kneading(problems; backend = CUDABackend())), \" s\")")
 with open(WORK + "/scan.log", "w") as log:
     code = subprocess.run([JL, "-t", "auto", f"--project={PROJECT}", "-e",
         f"using CUDA; include(\"{script}\"); {call}"],

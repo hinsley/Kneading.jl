@@ -40,8 +40,8 @@ end
 
 const settings = (
     capture = LocalMinimum(3),
-    word_length = 63,
-    maximum_time = 80.0,
+    word_length = 100,
+    maximum_time = 200.0,
     include_initial_event = false,
     integration = :rk4,
     dt = 2e-4,
@@ -55,15 +55,31 @@ function leech_plane(resolution)
     )
 end
 
-function saddle_focus_diagram(plane; backend = nothing, progress = nothing)
-    initializer = SaddleFocusInitializer(
-        equilibrium_guess = rest_state(-0.0272, plane.x[1]),
-        critical_kind = :minimum,
-        initial_event_index = 8,
-        maximum_event_index = 30,
-        max_time = 60.0,
-    )
-    return scan_flow_kneading(leech, plane; initializer, settings..., store_results = true, backend, progress)
+const focus_options = (critical_kind = :minimum, initial_event_index = 8, maximum_event_index = 30, max_time = 60.0)
+
+function saddle_focus_diagram(plane; backend = nothing)
+    initializer = SaddleFocusInitializer(; equilibrium_guess = rest_state(-0.0272, plane.x[1]), focus_options...)
+    return scan_flow_kneading(leech, plane; initializer, settings..., store_results = true, backend)
+end
+
+function fresh_saddle_focus_results(plane, focus; backend = nothing)
+    cells = [c for c in CartesianIndices(focus.statuses) if focus.statuses[c] == :initialization_failed &&
+        last(equilibrium_types(plane.x[c[2]], plane.y[c[1]])) == "2f"]
+    seeds = Vector{Any}(nothing, length(cells))
+    Threads.@threads :dynamic for k in eachindex(cells)
+        shift, current = plane.x[cells[k][2]], plane.y[cells[k][1]]
+        seeds[k] = try
+            init_saddle_focus(leech(shift, current); capture = settings.capture, focus_options...,
+                equilibrium_guess = rest_state(last(equilibrium_voltages(shift, current)), shift))
+        catch exception
+            exception isa Union{SaddleFocusInitializationError,DomainError} || rethrow()
+            nothing
+        end
+    end
+    found = findall(!isnothing, seeds)
+    problems = [FlowKneadingProblem(leech(plane.x[cells[k][2]], plane.y[cells[k][1]]); initializer = seeds[k],
+        settings...) for k in found]
+    return cells[found], isempty(problems) ? [] : flow_kneading(identity.(problems); backend)
 end
 
 function real_saddle_results(plane; backend = nothing)
@@ -79,9 +95,7 @@ function real_saddle_results(plane; backend = nothing)
         push!(cells, CartesianIndex(i, j))
         push!(problems, FlowKneadingProblem(leech(shift, current); initializer, settings...))
     end
-    results = isempty(problems) ? [] :
-        isnothing(backend) ? flow_kneading(identity.(problems)) : flow_kneading(identity.(problems); backend)
-    return cells, results
+    return cells, isempty(problems) ? [] : flow_kneading(identity.(problems); backend)
 end
 
 function write_orbit_table(path, plane, rows)
@@ -105,16 +119,18 @@ function equilibrium_type(V, shift, current)
     return string(unstable, any(λ -> abs(imag(λ)) > 0, eigenvalues) ? "f" : "")
 end
 
-function write_equilibrium_table(path, plane; refinement = 4)
+equilibrium_types(shift, current) =
+    [equilibrium_type(V, shift, current) for V in equilibrium_voltages(shift, current)]
+
+function write_equilibrium_table(path, plane; refinement = 2)
     shifts = range(first(plane.x), last(plane.x); length = refinement * length(plane.x))
     currents = range(first(plane.y), last(plane.y); length = refinement * length(plane.y))
     mkpath(dirname(abspath(path)))
     open(path, "w") do io
         println(io, "shift\tcurrent\tvoltages\ttypes")
         for shift in shifts, current in currents
-            voltages = equilibrium_voltages(shift, current)
-            types = [equilibrium_type(V, shift, current) for V in voltages]
-            println(io, shift, '\t', current, '\t', join(voltages, ','), '\t', join(types, ','))
+            println(io, shift, '\t', current, '\t', join(equilibrium_voltages(shift, current), ','), '\t',
+                join(equilibrium_types(shift, current), ','))
         end
     end
 end
@@ -123,23 +139,23 @@ function main(; backend = nothing)
     resolution = parse(Int, get(ENV, "LEECH_RESOLUTION", "32"))
     output = get(ENV, "LEECH_OUTPUT", joinpath(@__DIR__, "..", "output", "leech-heart-interneuron"))
     plane = leech_plane(resolution)
-    start = time()
-    initialized = Ref(NaN)
-    progress = (i, j, result) -> isnan(initialized[]) && !isnothing(result) && (initialized[] = time() - start)
-    focus_time = @elapsed focus = saddle_focus_diagram(plane; backend, progress)
-    saddle_time = @elapsed cells, saddle = real_saddle_results(plane; backend)
+    focus_time = @elapsed focus = saddle_focus_diagram(plane; backend)
     write_flow_scan(joinpath(output, "saddle-focus.tsv"), focus)
-    write_equilibrium_table(joinpath(output, "equilibria.tsv"), plane)
-    rows = vcat(vec([(c, "saddle_focus", focus.results[c]) for c in CartesianIndices(focus.results)]),
+    fresh_time = @elapsed fresh_cells, fresh = fresh_saddle_focus_results(plane, focus; backend)
+    saddle_time = @elapsed cells, saddle = real_saddle_results(plane; backend)
+    results = copy(focus.results)
+    foreach((c, r) -> results[c] = r, fresh_cells, fresh)
+    rows = vcat(vec([(c, "saddle_focus", results[c]) for c in CartesianIndices(results)]),
         [(c, "real_saddle", r) for (c, r) in zip(cells, saddle)])
     write_orbit_table(joinpath(output, "orbits.tsv"), plane, rows)
-    println("Saddle-focus scan: ", round(focus_time; digits = 1), " s (first word after ",
-        round(initialized[]; digits = 1), " s), complete words ",
-        count(==(:complete), focus.statuses), "/", length(focus.statuses),
-        ", initialization failures ", count(==(:initialization_failed), focus.statuses))
-    println("Real-saddle orbits: ", round(saddle_time; digits = 1), " s, ", length(saddle), " points")
+    write_equilibrium_table(joinpath(output, "equilibria.tsv"), plane)
+    statuses = [isnothing(r) ? :no_seed : r.status for r in results]
+    println("Saddle-focus scan: ", round(focus_time; digits = 1), " s; fresh starts: ", round(fresh_time; digits = 1),
+        " s for ", length(fresh), " points; real saddle: ", round(saddle_time; digits = 1), " s for ",
+        length(saddle), " points")
+    println("Saddle-focus statuses: ", sort!(collect(pairs(Dict(s => count(==(s), statuses) for s in unique(statuses)))); by = last, rev = true))
     println("Saved ", abspath(output))
-    return focus, cells, saddle
+    return focus, results, cells, saddle
 end
 
 abspath(PROGRAM_FILE) == abspath(@__FILE__) && main()

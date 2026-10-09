@@ -97,16 +97,24 @@ At $I_\mathrm{app} = 0$ it reproduces the published bursts with three spikes at
 $V_{K2}^\mathrm{shift} = -0.021$, two at $-0.016$, and tonic spiking at $-0.012$.
 
 The plane is $(V_{K2}^\mathrm{shift}, I_\mathrm{app})$. The shift drives the
-homoclinic spike-adding cascade; the current moves the equilibrium through a
-fold (three equilibria below about $-10$ pA) and an Andronov–Hopf bifurcation.
-Two orbits are followed at every point, with events at minima of $m$:
+spike-adding cascade of the paper; the current moves the equilibria through a
+fold (three equilibria below about $-10$ pA) and an Andronov–Hopf bifurcation of
+the depolarized equilibrium. Both curves come from classifying the equilibria on
+a finer grid. Two orbits are followed at every point, with events at minima of $m$:
 
-- the unstable manifold of the depolarized saddle-focus, from
-  `SaddleFocusInitializer` with continuation across the plane;
-- below the fold, the separatrix of the middle real saddle toward spiking, from
-  `RealSaddleInitializer`. It spikes and then rests, so its word is incomplete;
-  the number of events before rest and the longest return time locate
-  homoclinic orbits of the saddle.
+- The unstable manifold of the depolarized saddle-focus (two unstable
+  eigenvalues), from `SaddleFocusInitializer` continued across the plane, with a
+  fresh start where continuation fails. Its words change across homoclinic
+  bifurcations of the **saddle periodic orbit** that separates spiking from
+  quiescence: these are the spike-adding bands of the word map. They involve no
+  equilibrium, so return times to the equilibria do not show them.
+- Below the fold, the separatrix of the middle real saddle (one unstable
+  eigenvalue) toward spiking, from `RealSaddleInitializer`. It spikes and then
+  rests, so its word ends at rest. The number of events before rest forms a
+  staircase whose steps are **homoclinic orbits to the saddle equilibrium**: at a
+  step the separatrix lands on the saddle's stable manifold (checked by bisection,
+  where the closest return to the saddle shrinks toward zero). The figures draw
+  these steps as red contours.
 
 Run a small scan on the CPU, then plot:
 
@@ -128,3 +136,5 @@ kaggle kernels push -p output/kaggle
 ```
 
 ![Leech heart interneuron kneading diagram](leech_heart_interneuron_kneading.png)
+
+![Leech heart interneuron word map for slides](leech_heart_interneuron_slide.png)
