@@ -36,7 +36,12 @@ function tail_period(row; tail = 40, longest = 16)
     return NaN
 end
 
-events_before_rest(row) = resting(row) ? parse(Float64, row["events"]) : NaN
+function events_before_rest(row; slow = 2.0)
+    resting(row) || return NaN
+    events = parse(Float64, row["events"])
+    gap = events == 1 ? parse(Float64, row["last_event_time"]) : parse(Float64, row["longest_return"])
+    return events > 0 && gap > slow ? events - 1 : events
+end
 
 longest_return(row) = log10(parse(Float64, row["longest_return"]))
 
@@ -56,10 +61,10 @@ function homoclinic_curves!(axis, orbits; color = :red, linewidth = 1.6)
     finite = filter(isfinite, steps)
     isempty(finite) && return axis
     interior = copy(steps)
-    for (column, original) in zip(eachrow(interior), eachrow(steps)), k in 1:length(column)-1
-        isnan(original[k+1]) && (column[k] = NaN)
+    for (column, original) in zip(eachrow(interior), eachrow(steps)), k in 1:length(column)
+        any(isnan, original[k:min(k + 2, end)]) && (column[k] = NaN)
     end
-    levels = collect(0.5:1:maximum(finite))
+    levels = collect(0.5:1:min(maximum(finite), 14))
     contour!(axis, x, y, interior; levels, color, linewidth)
     return axis
 end

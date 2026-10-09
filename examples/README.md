@@ -114,11 +114,18 @@ a finer grid. Two orbits are followed at every point, with events at minima of $
   staircase whose steps are **homoclinic orbits to the saddle equilibrium**: at a
   step the separatrix lands on the saddle's stable manifold (checked by bisection,
   where the closest return to the saddle shrinks toward zero). The figures draw
-  these steps as red contours. Steps accumulate on the fold, so the pixel row
-  next to the fold is left out of the contours.
+  these steps as red contours. Near the fold the orbit passes slowly through the
+  ghost of the saddle-node and picks up one more $m$ minimum that is not a spike
+  (a nullcline tangency); the plot does not count an event that follows a gap
+  of more than 2 s, and leaves the two pixel rows next to the fold out of the
+  contours.
 
 The colors are the transition words of the critical orbit on the saddle-focus
-unstable manifold; words that end at rest below the fold are colored too. White
+unstable manifold; words that end at rest below the fold are colored too. The
+period of the word tail gives the number of spikes per burst. In the
+tonic-spiking region (shift above about $-14$ mV, period one) the bands differ
+only in the transient part of the word, before the orbit settles on tonic
+spiking. White
 means no word: above the Andronov–Hopf curve the depolarized equilibrium is
 stable and there is no saddle-focus to seed from, and the remaining white pixels
 are critical points that neither continuation nor a fresh start found, or words
