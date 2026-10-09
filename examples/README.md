@@ -114,24 +114,35 @@ a finer grid. Two orbits are followed at every point, with events at minima of $
   staircase whose steps are **homoclinic orbits to the saddle equilibrium**: at a
   step the separatrix lands on the saddle's stable manifold (checked by bisection,
   where the closest return to the saddle shrinks toward zero). The figures draw
-  these steps as red contours.
+  these steps as red contours. Steps accumulate on the fold, so the pixel row
+  next to the fold is left out of the contours.
+
+The colors are the transition words of the critical orbit on the saddle-focus
+unstable manifold; words that end at rest below the fold are colored too. White
+means no word: above the Andronov–Hopf curve the depolarized equilibrium is
+stable and there is no saddle-focus to seed from, and the remaining white pixels
+are critical points that neither continuation nor a fresh start found, or words
+still incomplete after 200 s. `leech_heart_interneuron_traces.jl` simulates the
+marked points A–E (small oscillations, bursts of three and two spikes, tonic
+spiking, and the separatrix that rests after two spikes) for the slide figure.
 
 Run a small scan on the CPU, then plot:
 
 ```sh
 LEECH_RESOLUTION=16 julia --project=. examples/leech_heart_interneuron_kneading.jl
+julia --project=. examples/leech_heart_interneuron_traces.jl
 julia --project=examples examples/plot_leech_heart_interneuron.jl output/leech-heart-interneuron
 ```
 
 `LEECH_SHIFT` and `LEECH_CURRENT` set the ranges, for example
-`LEECH_SHIFT=-0.028,-0.008` and `LEECH_CURRENT=-0.03,0.05`. On a GPU, call
+`LEECH_SHIFT=-0.032,-0.008` and `LEECH_CURRENT=-0.03,0.035`. On a GPU, call
 `main(backend = CUDABackend())` after `using CUDA`.
 `leech_heart_interneuron_kaggle.py` packages the package source and this
 script as a private Kaggle kernel for a T4:
 
 ```sh
 python3 examples/leech_heart_interneuron_kaggle.py <user> leech-scan \
-    --env LEECH_RESOLUTION=128 LEECH_SHIFT=-0.028,-0.008 LEECH_CURRENT=-0.03,0.05
+    --env LEECH_RESOLUTION=128 LEECH_SHIFT=-0.032,-0.008 LEECH_CURRENT=-0.03,0.035
 kaggle kernels push -p output/kaggle
 ```
 

@@ -49,8 +49,8 @@ const settings = (
 
 function leech_plane(resolution)
     return ParameterPlane(
-        collect(range(parse.(Float64, split(get(ENV, "LEECH_SHIFT", "-0.028,-0.008"), ','))...; length = resolution)),
-        collect(range(parse.(Float64, split(get(ENV, "LEECH_CURRENT", "-0.03,0.05"), ','))...; length = resolution));
+        collect(range(parse.(Float64, split(get(ENV, "LEECH_SHIFT", "-0.032,-0.008"), ','))...; length = resolution)),
+        collect(range(parse.(Float64, split(get(ENV, "LEECH_CURRENT", "-0.03,0.035"), ','))...; length = resolution));
         xname = "shift", yname = "current",
     )
 end
@@ -70,6 +70,7 @@ function fresh_saddle_focus_results(plane, focus; backend = nothing)
         shift, current = plane.x[cells[k][2]], plane.y[cells[k][1]]
         seeds[k] = try
             init_saddle_focus(leech(shift, current); capture = settings.capture, focus_options...,
+                initial_event_index = 16, event_index_fallback = false,
                 equilibrium_guess = rest_state(last(equilibrium_voltages(shift, current)), shift))
         catch exception
             exception isa Union{SaddleFocusInitializationError,DomainError} || rethrow()

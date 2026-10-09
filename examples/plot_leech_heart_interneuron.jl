@@ -55,12 +55,12 @@ function homoclinic_curves!(axis, orbits; color = :red, linewidth = 1.6)
     x, y, steps = grid(orbits, events_before_rest; seed = "real_saddle")
     finite = filter(isfinite, steps)
     isempty(finite) && return axis
-    filled = copy(steps)
-    for (column, original) in zip(eachrow(filled), eachrow(steps)), k in 2:length(column)
-        isnan(original[k]) && !isnan(original[k-1]) && (column[k] = original[k-1])
+    interior = copy(steps)
+    for (column, original) in zip(eachrow(interior), eachrow(steps)), k in 1:length(column)-1
+        isnan(original[k+1]) && (column[k] = NaN)
     end
     levels = collect(0.5:1:maximum(finite))
-    contour!(axis, x, y, filled; levels, color, linewidth)
+    contour!(axis, x, y, interior; levels, color, linewidth)
     return axis
 end
 
@@ -116,16 +116,32 @@ function plot_leech(directory; output = joinpath(directory, "figures"))
     save(path, figure; px_per_unit = 1)
     push!(paths, abspath(path))
 
-    figure = Figure(size = (1600, 1200), fontsize = 30, backgroundcolor = :white)
-    axis = heatmap_axis(figure[1, 1], "", x, y, words, equilibria, orbits; colormap = word_map,
+    figure = Figure(size = (1600, 1650), fontsize = 30, backgroundcolor = :white)
+    axis = heatmap_axis(figure[1, 1:5], "", x, y, words, equilibria, orbits; colormap = word_map,
         colorrange = (-0.5, 4095.5), xlabelsize = 34, ylabelsize = 34, homoclinics = false)
     homoclinic_curves!(axis, orbits; linewidth = 2.5)
     for (text, position) in slide_labels
         text!(axis, position...; text, color = :white, strokecolor = :black, strokewidth = 2,
             fontsize = 30, font = :bold, align = (:center, :center))
     end
-    Label(figure[2, 1], "colors: transition words of the saddle-focus unstable manifold  ·  solid: fold  ·  " *
-        "dashed: Andronov–Hopf  ·  red: homoclinics to the saddle"; fontsize = 22, tellwidth = false, color = :gray30)
+    traces = isfile(joinpath(directory, "traces.tsv")) ? read_table(joinpath(directory, "traces.tsv")) : []
+    labels = unique(row["label"] for row in traces)
+    for (k, label) in enumerate(labels)
+        rows = filter(row -> row["label"] == label, traces)
+        shift, current = 1000 .* parse.(Float64, (rows[1]["shift"], rows[1]["current"]))
+        scatter!(axis, [shift], [current]; color = :white, strokecolor = :black, strokewidth = 2, markersize = 26)
+        text!(axis, shift, current; text = label, fontsize = 20, font = :bold, align = (:center, :center))
+        inset = Axis(figure[2, k]; title = label, titlesize = 26, xlabel = "t (s)", ylabel = k == 1 ? "V (mV)" : "",
+            xgridvisible = false, ygridvisible = false, yticklabelsvisible = k == 1, xlabelsize = 24, ylabelsize = 24,
+            xticklabelsize = 20, yticklabelsize = 20)
+        lines!(inset, parse.(Float64, getindex.(rows, "time")), 1000 .* parse.(Float64, getindex.(rows, "voltage"));
+            color = :black, linewidth = 1.2)
+        ylims!(inset, -55, 45)
+    end
+    rowsize!(figure.layout, 1, Relative(0.72))
+    Label(figure[3, 1:5], "colors: transition words of the critical orbit on the saddle-focus unstable manifold  ·  " *
+        "white: no word\nsolid: fold  ·  dashed: Andronov–Hopf  ·  red: homoclinic orbits to the middle saddle";
+        fontsize = 22, tellwidth = false, color = :gray30)
     path = joinpath(output, "leech-heart-interneuron-slide.png")
     save(path, figure; px_per_unit = 1)
     push!(paths, abspath(path))
@@ -134,13 +150,13 @@ function plot_leech(directory; output = joinpath(directory, "figures"))
 end
 
 const slide_labels = [
-    ("tonic spiking", (-28.5, 8.0)),
-    ("spike adding:\nsaddle-orbit homoclinics", (-17.5, 2.0)),
-    ("tonic spiking", (-10.5, 14.0)),
-    ("Andronov–Hopf", (-25.0, 27.0)),
-    ("stable equilibrium", (-14.0, 30.5)),
-    ("fold", (-30.0, -8.5)),
-    ("rest after N spikes:\nhomoclinics to the saddle", (-19.0, -22.0)),
+    ("small\noscillations", (-25.8, 4.0)),
+    ("bursting:\nspike adding", (-19.0, 8.0)),
+    ("tonic\nspiking", (-10.0, 2.0)),
+    ("Andronov–Hopf", (-21.0, 24.0)),
+    ("stable equilibrium", (-24.5, 31.0)),
+    ("fold", (-26.5, -8.0)),
+    ("rest after N spikes:\nhomoclinics to the saddle", (-19.0, -24.0)),
 ]
 
 abspath(PROGRAM_FILE) == abspath(@__FILE__) &&
