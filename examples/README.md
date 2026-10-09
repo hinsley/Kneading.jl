@@ -156,3 +156,53 @@ kaggle kernels push -p output/kaggle
 ![Leech heart interneuron kneading diagram](leech_heart_interneuron_kneading.png)
 
 ![Leech heart interneuron word map for slides](leech_heart_interneuron_slide.png)
+
+### Spikes per burst
+
+`leech_heart_interneuron_spike_counts.jl` reads the critical orbits of the
+saddle-focus scan (the seed states in `orbits.tsv`) and codes each orbit by its
+spikes per burst instead of orientation. A spike is a maximum of $V$ above 0 mV
+(the counts do not change between −5 and 0 mV, while small oscillations peak
+below −9 mV and late spikes in long bursts can peak below +20 mV); a burst ends
+when the next spike is more than 0.4 s away (0.3 and 0.5 s give the same
+counts). The word is the first 14 counts, from fixed-step RK4 with a 0.1 ms
+step. Minima of $m$ are not used to split bursts, because $m$ has a minimum
+after every spike.
+
+```sh
+julia --project=. examples/leech_heart_interneuron_spike_counts.jl
+julia --project=examples examples/plot_leech_heart_interneuron_spike_counts.jl output/leech-heart-interneuron
+```
+
+The figure uses the 13,241 critical orbits that came from continuation in the
+128 × 128 scan; the 1,031 points seeded by fresh starts did not store their
+seeds and are white. Of the counted orbits, 5,704 give 14 complete counts,
+3,897 end at rest, 3,144 never spike above 0 mV, and 496 are unfinished after
+60 s.
+
+Compared with the orientation words of the same orbits, over neighbouring
+pixel pairs where both codings give a word, 5,040 pairs differ in both, 3,852
+only in the orientation word and 952 only in the counts.
+
+- Spike adding is explicit in both and at the same places: along
+  $I_\mathrm{app} = 0$ the final count and the period of the orientation word
+  both change 5→4 at −22.6 mV, 4→3 at −21.8 mV and 3→2 at −19.9 mV.
+- The period doubling from tonic spiking to two-spike bursts is seen only by
+  the counts (2→1 between −15.0 and −14.8 mV, near the published −14.9 mV).
+  At −15.2 and −15.0 mV the orbit alternates intervals of 0.28 and 0.84 s,
+  but the orientation reverses at every event on both sides.
+- Crease contours are seen only by the orientation words. At −11.78 mV between
+  18.6 and 19.1 pA, and at −9.0 pA between −22.36 and −22.17 mV, the spike
+  counts and the times of the $m$ minima are unchanged, while one orientation
+  sign flips.
+- Threshold contours are seen only by the counts. At 0.7 pA between −10.27
+  and −10.08 mV, and at −19.25 pA between −21.42 and −21.23 mV, the growing
+  oscillation that leaves the saddle-focus crosses 0 mV and becomes one more
+  "spike" (69 → 70 and 4 → 5 spikes), with identical $m$ minima and orientation
+  words. These contours move with the threshold.
+- Where bursts become very long, the count of the first burst rises past 40
+  spikes and the orbits are unfinished after 60 s; the orientation words show
+  a speckled band before the uniform small-oscillation region. The irregular
+  region is much narrower in the counts.
+
+![Leech heart interneuron spike-count diagram](leech_heart_interneuron_spike_counts.png)

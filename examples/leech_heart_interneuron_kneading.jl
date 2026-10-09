@@ -102,13 +102,13 @@ end
 function write_orbit_table(path, plane, rows)
     mkpath(dirname(abspath(path)))
     open(path, "w") do io
-        println(io, join(("shift", "current", "seed", "status", "events", "longest_return", "last_event_time", "transition_word"), '\t'))
+        println(io, join(("shift", "current", "seed", "status", "events", "longest_return", "last_event_time", "transition_word", "u1", "u2", "u3"), '\t'))
         for (cell, seed, result) in rows
             isnothing(result) && continue
             times = result.return_times
             println(io, join((plane.x[cell[2]], plane.y[cell[1]], seed, result.status, length(result.events),
                 isempty(times) ? NaN : maximum(times), isempty(result.events) ? NaN : result.events[end].time,
-                join(map(s -> s > 0 ? '1' : '0', result.transition_word))), '\t'))
+                join(map(s -> s > 0 ? '1' : '0', result.transition_word)), result.initialization.u0...), '\t'))
         end
     end
 end
