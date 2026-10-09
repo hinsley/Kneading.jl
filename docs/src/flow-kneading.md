@@ -869,18 +869,20 @@ Code that runs on the device must compile there:
   problems must share their rule, capture, observable, and options, and words
   hold at most 127 transitions.
 
-`precision = Float32` evaluates the vector field and its Jacobian-vector
-product in `Float32` and accumulates the state, tangent, time, and event
-interpolation in `Float64`. It can pay off on GPUs with little double-precision
-throughput when the vector field is expensive. Chaotic orbits drift apart, so
-later symbols can differ, and a sign taken at a critical point is fragile.
-Compare against `Float64` before trusting the words. A
-literal such as `0.3` in the rule promotes that term to `Float64`; put such
-constants in the parameters to keep the whole field in `Float32`.
+`precision = Float32` integrates entirely in `Float32`: vector field,
+Jacobian-vector product, state, and tangent. The state update is a compensated
+(Kahan) sum with a `Float32` error vector per orbit, so a slow variable whose
+change per step is below `Float32` resolution still moves; time is a step count,
+and events are reported in `Float64`. This pays off on GPUs with little
+double-precision throughput. Chaotic orbits still drift apart, so later symbols
+can differ, and a sign taken at a critical point is fragile; compare against
+`Float64` before trusting the words. A literal such as `0.3` in the rule
+promotes that term to `Float64`; put such constants in the parameters or wrap
+them in `oftype`.
 
 ```julia
-mixed = flow_kneading(problems; backend = CPU(), precision = Float32)
-agreement = count(k -> mixed[k].raw_word == results[k].raw_word, eachindex(results))
+single = flow_kneading(problems; backend = CPU(), precision = Float32)
+agreement = count(k -> single[k].raw_word == results[k].raw_word, eachindex(results))
 ```
 
 ## Public API

@@ -9,6 +9,35 @@ const _BATCH_NONFINITE_STATE = Int8(6)
 const _BATCH_MAXIMUM_ITERATIONS = Int8(7)
 const _BATCH_DEGENERATE_SEED = Int8(8)
 
+struct _BatchClock{T}
+    dt::T
+    last_step::T
+    steps::Int
+    maximum_time::Float64
+end
+
+function _BatchClock{T}(dt, maximum_time) where {T}
+    step = T(dt)
+    count = maximum_time / step
+    steps = count < typemax(Int) ? ceil(Int, count) : typemax(Int)
+    last_step = T(maximum_time - (steps - 1) * Float64(step))
+    last_step > 0 || ((steps, last_step) = (steps - 1, step))
+    return _BatchClock{T}(step, last_step, steps, Float64(maximum_time))
+end
+
+@inline _batch_start(::_BatchClock{Float64}) = 0.0
+@inline _batch_start(::_BatchClock) = 0
+@inline _batch_running(c::_BatchClock, t::Float64) = t < c.maximum_time
+@inline _batch_running(c::_BatchClock, n::Int) = n < c.steps
+@inline _batch_step(c::_BatchClock, t::Float64) = min(c.dt, c.maximum_time - t)
+@inline _batch_step(c::_BatchClock, n::Int) = n + 1 < c.steps ? c.dt : c.last_step
+@inline _batch_tick(t::Float64, step) = t + step
+@inline _batch_tick(n::Int, step) = n + 1
+@inline _batch_time(c::_BatchClock, t::Float64) = t
+@inline _batch_time(c::_BatchClock, n::Int) = n < c.steps ? n * Float64(c.dt) : c.maximum_time
+@inline _batch_rule_time(c::_BatchClock, t::Float64) = t
+@inline _batch_rule_time(c::_BatchClock{T}, n::Int) where {T} = T(n) * c.dt
+
 struct _BatchOptions{T,A,O}
     capture_index::Int
     maximum::Bool
@@ -16,14 +45,13 @@ struct _BatchOptions{T,A,O}
     observable::O
     word_length::Int
     transient_events::Int
-    dt::Float64
-    maximum_time::Float64
-    max_state::Float64
+    clock::_BatchClock{T}
+    max_state::T
     sign_atol::Float64
     sign_rtol::Float64
-    flow_norm::Float64
-    projected_norm::Float64
-    unit_norm::Float64
+    flow_norm::T
+    projected_norm::T
+    unit_norm::T
     minimum_event_separation::Float64
     maxiters::Int
     seed_invariance_tolerance::Float64
@@ -33,9 +61,9 @@ function _BatchOptions{T}(capture, observable, o) where {T}
     tolerance = isnothing(o.seed_invariance_tolerance) ? 0.0 : o.seed_invariance_tolerance
     return _BatchOptions{T,typeof(capture.accept),typeof(observable)}(
         capture.index, capture isa LocalMaximum, capture.accept, observable, o.word_length,
-        o.transient_events, o.dt, o.maximum_time, o.max_state, o.sign_atol, o.sign_rtol,
-        o.tolerances.flow_norm, o.tolerances.projected_norm, o.tolerances.unit_norm,
-        o.minimum_event_separation, o.maxiters, tolerance)
+        o.transient_events, _BatchClock{T}(o.dt, o.maximum_time), T(o.max_state), o.sign_atol,
+        o.sign_rtol, T(o.tolerances.flow_norm), T(o.tolerances.projected_norm),
+        T(max(o.tolerances.unit_norm, 64eps(T))), o.minimum_event_separation, o.maxiters, tolerance)
 end
 
 struct _BatchTag end
@@ -56,25 +84,42 @@ _batch_bit(bits::_BatchBits128, j) = j < 64 ? _batch_bit(bits.low, j) : _batch_b
 
 @inline _batch_dot(a, b) = sum(a .* b)
 
-@inline function _batch_field(rule, u::SVector{N,Float64}, p, t, ::Type{T}) where {N,T}
-    return SVector{N,Float64}(rule(SVector{N,T}(u), p, T(t)))
+@inline _batch_split(u::SVector{N,Float64}, ::Type{T}) where {N,T} =
+    SVector{N,T}(u), SVector{N,T}(u - SVector{N,Float64}(SVector{N,T}(u)))
+
+@inline _batch_value(u::SVector{N}, error = zero(u)) where {N} =
+    SVector{N,Float64}(u) + SVector{N,Float64}(error)
+
+@inline _batch_sum(u::SVector{N,Float64}, error, increment) where {N} = u + increment, error
+
+@inline function _batch_sum(u, error, increment)
+    y = increment + error
+    s = u + y
+    w = s - u
+    return s, (u - (s - w)) + (y - w)
 end
 
-@inline function _batch_jvp(rule, u::SVector{N,Float64}, v::SVector{N,Float64}, p, t, ::Type{T}) where {N,T}
+@inline function _batch_field(rule, u::SVector{N,S}, p, t, ::Type{T}) where {N,S,T}
+    return SVector{N,S}(rule(SVector{N,T}(u), p, T(t)))
+end
+
+@inline function _batch_jvp(rule, u::SVector{N,S}, v::SVector{N}, p, t, ::Type{T}) where {N,S,T}
     D = ForwardDiff.Dual{_BatchTag,T,1}
     dual = SVector{N,D}(ntuple(i -> D(T(u[i]), ForwardDiff.Partials((T(v[i]),))), Val(N)))
     image = rule(dual, p, T(t))
-    flow = SVector{N,Float64}(ntuple(i -> Float64(ForwardDiff.value(image[i])), Val(N)))
-    derivative = SVector{N,Float64}(ntuple(i -> Float64(ForwardDiff.partials(image[i], 1)), Val(N)))
+    flow = SVector{N,S}(ntuple(i -> S(ForwardDiff.value(image[i])), Val(N)))
+    derivative = SVector{N,S}(ntuple(i -> S(ForwardDiff.partials(image[i], 1)), Val(N)))
     return flow, derivative
 end
 
-@inline function _batch_rk4(rule, u, v, p, t, dt, ::Type{T}) where {T}
+@inline function _batch_rk4(rule, u, u_error, v, v_error, p, t, dt, ::Type{T}) where {T}
     k1u, k1v = _batch_jvp(rule, u, v, p, t, T)
     k2u, k2v = _batch_jvp(rule, u + dt / 2 * k1u, v + dt / 2 * k1v, p, t + dt / 2, T)
     k3u, k3v = _batch_jvp(rule, u + dt / 2 * k2u, v + dt / 2 * k2v, p, t + dt / 2, T)
     k4u, k4v = _batch_jvp(rule, u + dt * k3u, v + dt * k3v, p, t + dt, T)
-    return u + dt / 6 * (k1u + 2k2u + 2k3u + k4u), v + dt / 6 * (k1v + 2k2v + 2k3v + k4v)
+    next_u, next_u_error = _batch_sum(u, u_error, dt / 6 * (k1u + 2k2u + 2k3u + k4u))
+    next_v, next_v_error = _batch_sum(v, v_error, dt / 6 * (k1v + 2k2v + 2k3v + k4v))
+    return next_u, next_u_error, next_v, next_v_error
 end
 
 @inline function _batch_project(v, flow, o::_BatchOptions)
@@ -84,7 +129,7 @@ end
     projected_length = sqrt(_batch_dot(tangent, tangent))
     projected_length > o.projected_norm || return v, false
     tangent = tangent / projected_length
-    abs(sqrt(_batch_dot(tangent, tangent)) - 1.0) <= o.unit_norm || return v, false
+    abs(sqrt(_batch_dot(tangent, tangent)) - 1) <= o.unit_norm || return v, false
     return tangent, true
 end
 
@@ -159,55 +204,64 @@ end
 function _batch_word(rule, o::_BatchOptions{T}, p, u0::SVector{N,Float64}, v0::SVector{N,Float64},
     direction::SVector{N,Float64}, flag::UInt8, ::Type{B}, events, item) where {T,N,B}
     record = (_BATCH_MAXIMUM_TIME, zero(B), 0, 0, -Inf, (flag & 0x02) != 0x00)
-    v, projected_ok = _batch_project(v0, _batch_field(rule, u0, p, 0.0, T), o)
+    v0, projected_ok = _batch_project(v0, _batch_field(rule, u0, p, 0.0, T), o)
     projected_ok || return zero(B), 0, _BATCH_NUMERICAL_FAILURE, 0, 0.0
-    u = u0
-    terminal_time = 0.0
     stopped = false
+    stop_time = 0.0
     if (flag & 0x01) != 0x00
-        stopped, record = _batch_record(rule, o, p, u, v, 0.0, direction, record, events, item)
+        stopped, record = _batch_record(rule, o, p, u0, v0, 0.0, direction, record, events, item)
     end
-    t = 0.0
-    h_previous = _batch_field(rule, u, p, t, T)[o.capture_index]
+    u, u_error = _batch_split(u0, T)
+    v = SVector{N,T}(v0)
+    clock = _batch_start(o.clock)
+    h_previous = _batch_field(rule, u, p, 0.0, T)[o.capture_index]
     iterations = 0
-    while !stopped && t < o.maximum_time
+    while !stopped && _batch_running(o.clock, clock)
         iterations += 1
         if iterations > o.maxiters
             record = Base.setindex(record, _BATCH_MAXIMUM_ITERATIONS, 1)
             break
         end
-        step = min(o.dt, o.maximum_time - t)
-        next_u, next_v = _batch_rk4(rule, u, v, p, t, step, T)
-        terminal_time = t + step
+        step = _batch_step(o.clock, clock)
+        rule_time = _batch_rule_time(o.clock, clock)
+        next_u, next_u_error, next_v, _ = _batch_rk4(rule, u, u_error, v, zero(v), p, rule_time, step, T)
+        next_clock = _batch_tick(clock, step)
         if !(all(isfinite, next_u) && all(isfinite, next_v))
             record = Base.setindex(record, _BATCH_NONFINITE_STATE, 1)
+            clock = next_clock
             break
         end
         if maximum(abs, next_u) > o.max_state
             record = Base.setindex(record, _BATCH_STATE_LIMIT, 1)
+            clock = next_clock
             break
         end
-        next_flow = _batch_field(rule, next_u, p, t + step, T)
+        next_flow = _batch_field(rule, next_u, p, rule_time + step, T)
         next_v, projected_ok = _batch_project(next_v, next_flow, o)
         if !projected_ok
             record = Base.setindex(record, _BATCH_NUMERICAL_FAILURE, 1)
+            clock = next_clock
             break
         end
         h_next = next_flow[o.capture_index]
         crossed = o.maximum ? h_previous > 0 && h_next <= 0 : h_previous < 0 && h_next >= 0
         if crossed
-            fraction = clamp(h_previous / (h_previous - h_next), 0.0, 1.0)
+            fraction = clamp(h_previous / (h_previous - h_next), 0, 1)
+            t = _batch_time(o.clock, clock)
             event_time = t + fraction * step
             if event_time > o.minimum_event_separation
-                stopped, record = _batch_record(rule, o, p, u + fraction * (next_u - u),
-                    v + fraction * (next_v - v), event_time, direction, record, events, item)
-                stopped && record[1] != _BATCH_NUMERICAL_FAILURE && (terminal_time = event_time)
+                a, b = _batch_value(u, u_error), _batch_value(next_u, next_u_error)
+                tangent = _batch_value(v)
+                stopped, record = _batch_record(rule, o, p, a + fraction * (b - a),
+                    tangent + fraction * (_batch_value(next_v) - tangent), event_time, direction, record, events, item)
+                stop_time = event_time
             end
         end
-        u, v = next_u, next_v
+        u, u_error, v = next_u, next_u_error, next_v
         h_previous = h_next
-        t += step
+        clock = next_clock
     end
+    terminal_time = stopped && record[1] != _BATCH_NUMERICAL_FAILURE ? stop_time : _batch_time(o.clock, clock)
     return record[2], record[3], record[1], record[4], terminal_time
 end
 
@@ -385,8 +439,9 @@ problems must select it and share their rule, capture, observable, and options. 
 parameter vectors (or an isbits parameter value). The rule, the capture's
 `accept`, and a function observable run on the device with
 `u::SVector{N,Float64}`, so they must avoid allocation and captured arrays.
-`precision=Float32` evaluates the vector field and its Jacobian-vector product
-in `Float32` while accumulating state, tangent, and time in `Float64`.
+`precision=Float32` integrates the state and tangent in `Float32`, with a
+compensated state update and a step count for time, and reports events in
+`Float64`.
 """
 function flow_kneading(problems::AbstractArray{<:FlowKneadingProblem};
     backend = nothing, precision::Type = Float64, threaded::Bool = true)

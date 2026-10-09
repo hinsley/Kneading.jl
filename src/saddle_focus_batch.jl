@@ -272,16 +272,15 @@ struct _SFBatchOptions{T,A}
     capture_index::Int
     maximum::Bool
     accept::A
-    dt::Float64
-    max_time::Float64
-    max_state::Float64
+    clock::_BatchClock{T}
+    max_state::T
     maxiters::Int
     event_tolerance::Float64
 end
 
 _SFBatchOptions{T}(capture, options, dt) where {T} = _SFBatchOptions{T,typeof(capture.accept)}(
-    capture.index, capture isa LocalMaximum, capture.accept, Float64(dt), Float64(options.max_time),
-    Float64(options.max_state), Int(options.maxiters), Float64(options.event_tolerance))
+    capture.index, capture isa LocalMaximum, capture.accept, _BatchClock{T}(dt, options.max_time),
+    T(options.max_state), Int(options.maxiters), Float64(options.event_tolerance))
 
 struct _SFBatchItem{N,P}
     parameters::P
@@ -315,15 +314,16 @@ end
     return flow, rate[o.capture_index]
 end
 
-@inline function _sf_batch_event(rule, o::_SFBatchOptions{T}, p, u, v, t, step, fraction) where {T}
+@inline function _sf_batch_event(rule, o::_SFBatchOptions{T}, p, u, u_error, v, v_error, t, step, fraction) where {T}
     tau = fraction * step
     for _ in 1:3
-        trial, _ = _batch_rk4(rule, u, v, p, t, tau, T)
+        trial, _ = _batch_rk4(rule, u, u_error, v, v_error, p, t, tau, T)
         flow, rate = _sf_batch_rate(rule, o, p, trial, t + tau)
         correction = flow[o.capture_index] / rate
-        isfinite(correction) && (tau = clamp(tau - correction, 0.0, step))
+        isfinite(correction) && (tau = clamp(tau - correction, 0, step))
     end
-    state, sensitivity = _batch_rk4(rule, u, v, p, t, tau, T)
+    state, state_error, sensitivity, sensitivity_error = _batch_rk4(rule, u, u_error, v, v_error, p, t, tau, T)
+    state, sensitivity = _batch_value(state, state_error), _batch_value(sensitivity, sensitivity_error)
     flow, rate = _sf_batch_rate(rule, o, p, state, t + tau)
     _, image = _batch_jvp(rule, state, sensitivity, p, t + tau, T)
     tangent = sensitivity - (image[o.capture_index] / rate) * flow
@@ -334,37 +334,40 @@ function _batch_sf_evaluate(rule, o::_SFBatchOptions{T}, item::_SFBatchItem{N}) 
     E = _SFBatchEvaluation{N}
     radius = exp(item.rho)
     p = item.parameters
-    u = item.equilibrium + radius * item.direction
-    v = radius * item.direction
-    t = 0.0
-    h_previous = _batch_field(rule, u, p, t, T)[o.capture_index]
+    u, u_error = _batch_split(item.equilibrium + radius * item.direction, T)
+    v, v_error = _batch_split(radius * item.direction, T)
+    clock = _batch_start(o.clock)
+    h_previous = _batch_field(rule, u, p, 0.0, T)[o.capture_index]
     found = 0
     time = NaN
     state = zero(SVector{N,Float64})
     tangent = state
     transversality = NaN
     iterations = 0
-    while t < o.max_time
+    while _batch_running(o.clock, clock)
         iterations += 1
         iterations > o.maxiters && return _sf_batch_failure(E, 6)
-        step = min(o.dt, o.max_time - t)
-        next_u, next_v = _batch_rk4(rule, u, v, p, t, step, T)
+        step = _batch_step(o.clock, clock)
+        rule_time = _batch_rule_time(o.clock, clock)
+        next_u, next_u_error, next_v, next_v_error = _batch_rk4(rule, u, u_error, v, v_error, p, rule_time, step, T)
         all(isfinite, next_u) && all(isfinite, next_v) && maximum(abs, next_u) <= o.max_state ||
             return _sf_batch_failure(E, 4)
-        h_next = _batch_field(rule, next_u, p, t + step, T)[o.capture_index]
+        h_next = _batch_field(rule, next_u, p, rule_time + step, T)[o.capture_index]
         crossed = o.maximum ? h_previous > 0 && h_next <= 0 : h_previous < 0 && h_next >= 0
         if crossed
-            fraction = clamp(h_previous / (h_previous - h_next), 0.0, 1.0)
+            fraction = clamp(h_previous / (h_previous - h_next), 0, 1)
+            t = _batch_time(o.clock, clock)
             event_time = t + fraction * step
             if event_time >= item.guard
-                candidate = u + fraction * (next_u - u)
+                a, b = _batch_value(u, u_error), _batch_value(next_u, next_u_error)
+                candidate = a + fraction * (b - a)
                 _, rate = _sf_batch_rate(rule, o, p, candidate, event_time)
                 if (o.maximum ? rate < 0 : rate > 0) && o.accept(candidate, p, event_time)
                     abs(rate) > o.event_tolerance || return _sf_batch_failure(E, 5)
                     found += 1
                     if found >= item.event_index
                         event_time, event_state, event_tangent, event_rate =
-                            _sf_batch_event(rule, o, p, u, v, t, step, fraction)
+                            _sf_batch_event(rule, o, p, u, u_error, v, v_error, t, step, fraction)
                         isfinite(event_rate) && abs(event_rate) > o.event_tolerance || return _sf_batch_failure(E, 5)
                         if found == item.event_index
                             time, state, tangent, transversality = event_time, event_state, event_tangent, event_rate
@@ -376,9 +379,9 @@ function _batch_sf_evaluate(rule, o::_SFBatchOptions{T}, item::_SFBatchItem{N}) 
                 end
             end
         end
-        u, v = next_u, next_v
+        u, u_error, v, v_error = next_u, next_u_error, next_v, next_v_error
         h_previous = h_next
-        t += step
+        clock = _batch_tick(clock, step)
     end
     return _sf_batch_failure(E, 3)
 end

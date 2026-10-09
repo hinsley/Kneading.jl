@@ -31,18 +31,25 @@ end
     initializer = RealSaddleInitializer(equilibrium_guess = zeros(3))
     for (capture, observable) in ((LocalMaximum(3), CoordinateComponent(3)),
         (LocalMaximum(1; accept = (u, p, t) -> u[1] > 0), CoordinateComponent(1)))
-        problems = [FlowKneadingProblem(CoupledODEs(lorenz, zeros(3), [10.0, rho, 8 / 3]);
+        problems(dt) = [FlowKneadingProblem(CoupledODEs(lorenz, zeros(3), [10.0, rho, 8 / 3]);
             initializer, capture, observable, word_length = 16, maximum_time = 300.0,
-            integration = :rk4, dt = 0.01) for rho in range(24.5, 60.0; length = 8)]
-        cpu = flow_kneading.(problems)
-        device = flow_kneading(problems; backend = CPU())
+            integration = :rk4, dt) for rho in range(24.5, 60.0; length = 8)]
+        cpu = flow_kneading.(problems(0.01))
+        device = flow_kneading(problems(0.01); backend = CPU())
         @test all(result -> result.complete, cpu)
         foreach(same_results, cpu, device)
-        @test [result.raw_word for result in flow_kneading(problems)] == [result.raw_word for result in cpu]
-        mixed = flow_kneading(problems; backend = CPU(), precision = Float32)
-        @test all(result -> result.complete, mixed)
-        @test count(k -> mixed[k].raw_word[1:8] == cpu[k].raw_word[1:8], eachindex(cpu)) >= 7
-        @test all(result -> result.metadata.precision === Float32, mixed)
+        @test [result.raw_word for result in flow_kneading(problems(0.01))] == [result.raw_word for result in cpu]
+        single = flow_kneading(problems(0.01); backend = CPU(), precision = Float32)
+        half = flow_kneading(problems(0.005); backend = CPU())
+        @test all(result -> result.complete, single)
+        @test all(result -> result.metadata.precision === Float32, single)
+        for (a, b, c) in zip(single, cpu, half)
+            robust = something(findfirst(b.raw_word .!= c.raw_word), length(b.raw_word) + 1) - 1
+            @test robust >= 4
+            @test a.raw_word[1:robust] == b.raw_word[1:robust]
+            @test a.events[1].time ≈ b.events[1].time rtol = 1e-5
+            @test a.events[1].state ≈ b.events[1].state rtol = 1e-5
+        end
     end
 end
 
@@ -187,8 +194,8 @@ end
     problems = [FlowKneadingProblem(builder(c, 0.3); settings...) for c in plane.x]
     batched = flow_kneading(problems; backend = CPU())
     @test [r.initialization.u0 for r in batched] == [device.results[1, j].initialization.u0 for j in eachindex(plane.x)]
-    mixed = flow_kneading(problems; backend = CPU(), precision = Float32)
-    @test all(k -> isapprox(mixed[k].initialization.u0, batched[k].initialization.u0; atol = 1e-5), eachindex(batched))
+    single = flow_kneading(problems; backend = CPU(), precision = Float32)
+    @test all(k -> isapprox(single[k].initialization.u0, batched[k].initialization.u0; atol = 1e-5), eachindex(batched))
     narrow = SaddleFocusInitializer(; options..., rho_range = (-24.0, -3.0))
     unfound = scan_flow_kneading(builder, plane; settings..., initializer = narrow, backend = CPU())
     @test all(==(:initialization_failed), unfound.statuses)

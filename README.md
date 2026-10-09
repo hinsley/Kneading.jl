@@ -27,7 +27,7 @@ For autonomous ODE systems whose attractors admit approximately one-dimensional 
 - Capture of local maxima or minima of a state variable, with optional event-acceptance filters.
 - Component or observable-direction signs, orientation-preservation and reversal words, event states, and return times.
 - Parameter-plane scans with continuation, incomplete-word reporting, and export of scan results.
-- Batched word integration of many orbits on CPU threads or GPUs with a `backend` keyword (via KernelAbstractions), optionally in mixed precision.
+- Batched word integration of many orbits on CPU threads or GPUs with a `backend` keyword (via KernelAbstractions), optionally in compensated single precision.
 - Batched saddle-focus seeding on GPUs: `SaddleFocusInitializer(...; selection = :first)` seeds every parameter point independently at the first return-map turning point outward from the saddle-focus, and a `backend` searches the whole plane together.
 
 The lower-level `Kneading.RealSaddleInitialization` and
