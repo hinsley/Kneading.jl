@@ -9,6 +9,7 @@ include("real_saddle_initialization.jl")
 include("saddle_focus_initialization.jl")
 include("flow_words.jl")
 include("flow_kneading_scan.jl")
+include("flow_kneading_batch.jl")
 include("docs_flow_examples.jl")
 include("rossler_reference.jl")
 

@@ -36,10 +36,59 @@ end
 _scan_initialize(system, initializer, capture, previous) =
     _initialize_flow(system, initializer, capture)
 
+function _try_scan_initialize(system, initializer, capture, previous, on_error)
+    try
+        return _scan_initialize(system, initializer, capture, previous), ""
+    catch exception
+        if on_error == :throw || !(exception isa SaddleFocusInitializationError ||
+            exception isa InvalidRealSaddleInitialState || exception isa DomainError)
+            rethrow()
+        end
+        return nothing, sprint(showerror, exception)
+    end
+end
+
+function _record_scan_seed!(critical_states, critical_residuals, critical_rhos, event_indices, i, j, seed)
+    critical_states[i, j] = copy(seed.u0)
+    if seed isa SaddleFocusSeed
+        critical_residuals[i, j] = seed.diagnostics.residual
+        critical_rhos[i, j] = seed.rho
+        event_indices[i, j] = seed.event_index
+    end
+    return nothing
+end
+
+function _continuation_sweep(visit, dims, threaded)
+    anchors = Vector{Any}(undef, dims[2])
+    previous = nothing
+    for j in 1:dims[2]
+        previous = visit(1, j, previous)
+        anchors[j] = previous
+    end
+    function column(j)
+        column_previous = anchors[j]
+        for i in 2:dims[1]
+            column_previous = visit(i, j, column_previous)
+        end
+    end
+    parallel = threaded && Threads.nthreads() > 1
+    if parallel
+        Threads.@threads :dynamic for j in 1:dims[2]
+            column(j)
+        end
+    else
+        for j in 1:dims[2]
+            column(j)
+        end
+    end
+    return parallel
+end
+
 """
     scan_flow_kneading(builder, plane; initializer, capture,
                       observable=CoordinateComponent(capture.index),
-                      threaded=true, store_results=false, progress=nothing, kwargs...)
+                      threaded=true, store_results=false, progress=nothing,
+                      backend=nothing, precision=Float64, kwargs...)
 
 Build a fresh `CoupledODEs` with `builder(x,y)` at each parameter point and
 calculate its flow-kneading word. The first row is continued serially; each
@@ -52,6 +101,11 @@ Expected numerical initialization failures are recorded rather than painted as
 valid words; unexpected programming errors are rethrown. Set `on_error=:throw`
 to stop on any initialization failure. The optional `progress(i,j,result)` runs
 under a lock, with `result=nothing` when initialization fails.
+
+With a KernelAbstractions `backend`, every point is first initialized on the CPU
+with the same continuation, and all words are then integrated together on the
+device, as in the vector method of [`flow_kneading`](@ref). This requires
+`integration=:rk4`; `precision` is passed on as well.
 """
 function scan_flow_kneading(
     builder,
@@ -63,9 +117,14 @@ function scan_flow_kneading(
     store_results::Bool = false,
     progress = nothing,
     on_error::Symbol = :record,
+    backend = nothing,
+    precision::Type = Float64,
     kwargs...,
 )
     on_error in (:record, :throw) || throw(ArgumentError("on_error must be :record or :throw"))
+    isnothing(backend) || return _scan_flow_kneading_batch(builder, plane, initializer, capture,
+        observable, threaded, store_results, progress, on_error, backend, precision; kwargs...)
+    precision === Float64 || throw(ArgumentError("precision requires a device backend"))
     dims = (length(plane.y), length(plane.x))
     raw_codes = fill(big(-1), dims)
     transition_codes = fill(big(-1), dims)
@@ -83,15 +142,10 @@ function scan_flow_kneading(
 
     function visit(i, j, previous)
         system = builder(plane.x[j], plane.y[i])
-        seed = try
-            _scan_initialize(system, initializer, capture, previous)
-        catch exception
-            if on_error == :throw || !(exception isa SaddleFocusInitializationError ||
-                exception isa InvalidRealSaddleInitialState || exception isa DomainError)
-                rethrow()
-            end
+        seed, message = _try_scan_initialize(system, initializer, capture, previous, on_error)
+        if isnothing(seed)
             statuses[i, j] = :initialization_failed
-            errors[i, j] = sprint(showerror, exception)
+            errors[i, j] = message
             if !isnothing(progress)
                 lock(progress_lock) do
                     progress(i, j, nothing)
@@ -109,12 +163,7 @@ function scan_flow_kneading(
         raw_words[i, j] = copy(result.raw_word)
         statuses[i, j] = result.status
         errors[i, j] = result.metadata.detail
-        critical_states[i, j] = copy(seed.u0)
-        if seed isa SaddleFocusSeed
-            critical_residuals[i, j] = seed.diagnostics.residual
-            critical_rhos[i, j] = seed.rho
-            event_indices[i, j] = seed.event_index
-        end
+        _record_scan_seed!(critical_states, critical_residuals, critical_rhos, event_indices, i, j, seed)
         store_results && (results[i, j] = result)
         if !isnothing(progress)
             lock(progress_lock) do
@@ -124,29 +173,9 @@ function scan_flow_kneading(
         return seed
     end
 
-    anchors = Vector{Any}(undef, dims[2])
-    previous = nothing
-    for j in eachindex(plane.x)
-        previous = visit(1, j, previous)
-        anchors[j] = previous
-    end
-    function column(j)
-        column_previous = anchors[j]
-        for i in 2:dims[1]
-            column_previous = visit(i, j, column_previous)
-        end
-    end
-    if threaded && Threads.nthreads() > 1
-        Threads.@threads :dynamic for j in eachindex(plane.x)
-            column(j)
-        end
-    else
-        for j in eachindex(plane.x)
-            column(j)
-        end
-    end
+    parallel = _continuation_sweep(visit, dims, threaded)
     metadata = (; initializer, capture, observable, options = (; kwargs...),
-        threaded = threaded && Threads.nthreads() > 1, word_encoding = :preservation_is_one)
+        threaded = parallel, word_encoding = :preservation_is_one)
     return FlowKneadingDiagram(plane, raw_codes, transition_codes, raw_lengths,
         transition_lengths, raw_words, statuses, errors, critical_states, critical_residuals, critical_rhos,
         event_indices, results, metadata)

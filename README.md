@@ -27,6 +27,7 @@ For autonomous ODE systems whose attractors admit approximately one-dimensional 
 - Capture of local maxima or minima of a state variable, with optional event-acceptance filters.
 - Component or observable-direction signs, orientation-preservation and reversal words, event states, and return times.
 - Parameter-plane scans with continuation, incomplete-word reporting, and export of scan results.
+- Batched word integration of many orbits on CPU threads or GPUs with a `backend` keyword (via KernelAbstractions), optionally in mixed precision.
 
 The lower-level `Kneading.RealSaddleInitialization` and
 `Kneading.FlowNormalTangents` namespaces also expose orbit-seeding and

@@ -8,6 +8,7 @@ import ForwardDiff
 import SciMLBase
 using OrdinaryDiffEqTsit5: Tsit5
 using LinearAlgebra
+using StaticArrays: SVector
 using ..FlowNormalTangents
 using ..RealSaddleInitialization
 using ..Diagrams: ParameterPlane
@@ -99,5 +100,6 @@ end
 include("saddle_focus_initialization.jl")
 include("flow_words.jl")
 include("flow_kneading_scan.jl")
+include("flow_kneading_batch.jl")
 
 end

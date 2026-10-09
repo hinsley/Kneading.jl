@@ -8,26 +8,32 @@ ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 OrdinaryDiffEqTsit5 = "b1df2697-797e-41e3-8120-5422d3b24e4a"
 SciMLBase = "0bca4576-84f4-4d90-8ffe-ffa030f20462"
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [weakdeps]
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
+KernelAbstractions = "63c18a36-062a-441e-b654-da1e3ab1ce7c"
 
 [extensions]
 KneadingCairoMakieExt = "CairoMakie"
+KneadingKernelAbstractionsExt = "KernelAbstractions"
 
 [compat]
 CairoMakie = "0.15"
 DynamicalSystemsBase = "3.19"
 ForwardDiff = "1"
+KernelAbstractions = "0.9"
 LinearAlgebra = "1.10"
 OrdinaryDiffEqTsit5 = "2"
 SciMLBase = "3"
+StaticArrays = "1"
 julia = "1.10"
 
 [extras]
+KernelAbstractions = "63c18a36-062a-441e-b654-da1e3ab1ce7c"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Printf", "Random", "Test"]
+test = ["KernelAbstractions", "Printf", "Random", "Test"]

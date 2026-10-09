@@ -732,6 +732,94 @@ settings, seed refinement, nonzero sign tolerances, and longer words.
 
 ![Rössler kneading diagram computed by the public flow-kneading API, with seven transition signs](assets/rossler-flow-kneading-diagram.png)
 
+## Many orbits on CPU threads or a GPU
+
+`flow_kneading` also accepts an array of problems and returns an array of
+results of the same shape. By default each problem is solved on its own, across
+Julia threads. Passing a KernelAbstractions `backend` keeps initialization on
+the CPU but integrates every word together in one kernel, one orbit per GPU
+thread. The kernel repeats the `integration = :rk4` method step for step:
+fixed-step RK4 of the state and tangent, the tangent advanced by a dual-number
+Jacobian-vector product, projection and normalization after every step,
+linearly interpolated extrema, the minimum event separation, and the same
+statuses, events, and incomplete-word conventions.
+
+```julia
+using KernelAbstractions
+
+lorenz_static(u, p, t) = SVector(p[1] * (u[2] - u[1]),
+    u[1] * (p[2] - u[3]) - u[2], u[1] * u[2] - p[3] * u[3])
+saddle = RealSaddleInitializer(equilibrium_guess = zeros(3))
+
+problems = [FlowKneadingProblem(
+    CoupledODEs(lorenz_static, zeros(3), [10.0, ρ, 8 / 3]);
+    initializer = saddle,
+    capture = LocalMaximum(3),
+    word_length = 16,
+    integration = :rk4,
+    dt = 0.01,
+) for ρ in range(25.0, 60.0; length = 8)]
+
+results = flow_kneading(problems; backend = CPU())
+words = [r.transition_word for r in results]
+```
+
+On an NVIDIA GPU, run `using CUDA` and pass `backend = CUDABackend()`; other
+KernelAbstractions backends work the same way. With `CPU()` the words, event
+times, and states equal those of `flow_kneading(problem)`; GPU arithmetic can
+differ in the last bits.
+
+`scan_flow_kneading` takes the same keywords. It continues the initialization
+across the plane on CPU threads, then integrates the whole plane in one batch:
+
+```julia
+rossler_static(u, p, t) = SVector(-u[2] - u[3], u[1] + p[1] * u[2],
+    0.3 * u[1] + u[3] * (u[1] - p[2]))
+
+device_diagram = scan_flow_kneading(
+    (c, a) -> CoupledODEs(rossler_static, zeros(3), [a, c]),
+    plane;
+    initializer = SaddleFocusInitializer(equilibrium_guess = zeros(3), critical_kind = :minimum),
+    capture = LocalMinimum(2),
+    word_length = 7,
+    max_state = 1e6,
+    integration = :rk4,
+    dt = 0.02,
+    backend = CPU(),
+)
+```
+
+The result is an ordinary `FlowKneadingDiagram` for `write_flow_scan` and
+plotting; `store_results = true` also keeps each point's events.
+
+Code that runs on the device must compile there:
+
+- The rule is out of place, returns an `SVector`, and accepts ForwardDiff dual
+  numbers. Parameters are a real vector, converted to an `SVector`, or another
+  isbits value.
+- `LocalMaximum(i)` and `LocalMinimum(i)` are supported, with an `accept`
+  predicate such as `(u, p, t) -> u[1] > 0` that is called on an
+  `SVector{N,Float64}` state.
+- `CoordinateComponent(i)` is supported, as is an observable function returning
+  an `SVector` direction.
+- Functions must not allocate or capture arrays or mutable globals. All
+  problems must share their rule, capture, observable, and options, and words
+  hold at most 127 transitions.
+
+`precision = Float32` evaluates the vector field and its Jacobian-vector
+product in `Float32` and accumulates the state, tangent, time, and event
+interpolation in `Float64`. It can pay off on GPUs with little double-precision
+throughput when the vector field is expensive. Chaotic orbits drift apart, so
+later symbols can differ, and a sign taken at a critical point is fragile.
+Compare against `Float64` before trusting the words. A
+literal such as `0.3` in the rule promotes that term to `Float64`; put such
+constants in the parameters to keep the whole field in `Float32`.
+
+```julia
+mixed = flow_kneading(problems; backend = CPU(), precision = Float32)
+agreement = count(k -> mixed[k].raw_word == results[k].raw_word, eachindex(results))
+```
+
 ## Public API
 
 ```@meta
