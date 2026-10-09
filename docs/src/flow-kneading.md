@@ -878,7 +878,9 @@ double-precision throughput. Chaotic orbits still drift apart, so later symbols
 can differ, and a sign taken at a critical point is fragile; compare against
 `Float64` before trusting the words. A literal such as `0.3` in the rule
 promotes that term to `Float64`; put such constants in the parameters or wrap
-them in `oftype`.
+them in `oftype`. The rule and its derivative must also stay finite in
+`Float32`: `1 / (1 + exp(V + 54))` overflows for `V` above about 35, while the
+equal `e / (1 + e)` with `e = exp(-(V + 54))` does not.
 
 ```julia
 single = flow_kneading(problems; backend = CPU(), precision = Float32)
