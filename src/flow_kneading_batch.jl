@@ -40,6 +40,20 @@ end
 
 struct _BatchTag end
 
+struct _BatchBits128
+    high::UInt64
+    low::UInt64
+end
+
+Base.zero(::Type{_BatchBits128}) = _BatchBits128(0, 0)
+
+@inline _batch_push(bits::UInt64, positive::Bool) = (bits << 1) | UInt64(positive)
+@inline _batch_push(bits::_BatchBits128, positive::Bool) =
+    _BatchBits128((bits.high << 1) | (bits.low >> 63), (bits.low << 1) | UInt64(positive))
+
+_batch_bit(bits::UInt64, j) = (bits >> j) & 0x01 == 0x01
+_batch_bit(bits::_BatchBits128, j) = j < 64 ? _batch_bit(bits.low, j) : _batch_bit(bits.high, j - 64)
+
 @inline _batch_dot(a, b) = sum(a .* b)
 
 @inline function _batch_field(rule, u::SVector{N,Float64}, p, t, ::Type{T}) where {N,T}
@@ -136,7 +150,7 @@ end
     tolerance = o.sign_atol + o.sign_rtol * sqrt(_batch_dot(projected, projected)) * observable_norm
     abs(component) <= tolerance &&
         return true, (_BATCH_AMBIGUOUS_SIGN, bits, len, seen, last_event, check_seed)
-    bits = (bits << 1) | (component > 0 ? one(bits) : zero(bits))
+    bits = _batch_push(bits, component > 0)
     len += 1
     len == o.word_length + 1 && return true, (_BATCH_COMPLETE, bits, len, seen, last_event, check_seed)
     return false, (status, bits, len, seen, last_event, check_seed)
@@ -216,7 +230,7 @@ function _batch_rule(system)
     return DynamicalSystemsBase.dynamic_rule(system)
 end
 
-_batch_raw_word(bits, len) = Int8[((bits >> (len - k)) & one(bits)) == one(bits) ? 1 : -1 for k in 1:len]
+_batch_raw_word(bits, len) = Int8[_batch_bit(bits, len - k) ? 1 : -1 for k in 1:len]
 
 function _batch_initial_direction(observable, u0, p)
     observable isa CoordinateComponent &&
@@ -287,7 +301,7 @@ function _flow_kneading_batch(problems, seeds, backend, precision, record_events
     end
 
     options = _BatchOptions{precision}(capture, observable, o)
-    B = o.word_length < 64 ? UInt64 : UInt128
+    B = o.word_length < 64 ? UInt64 : _BatchBits128
     launch(selected) = _launch_flow_words(backend, rule, options, device_parameters[selected],
         states[selected], tangents[selected], directions[selected], flags[selected], B,
         record_events ? o.word_length + 1 : 0)
