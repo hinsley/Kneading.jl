@@ -13,6 +13,11 @@
       "sha256": "cdf2b4906d3e934c2e77a1908a288da728ad7722de4523baea58fce083c3d7ba"
     },
     {
+      "path": "chebyshev-2026-11-05/HOMOCLINIC-COBWEB.md",
+      "bytes": 1888,
+      "sha256": "cfae72642728d093f10b945e5cbe2f6c27c591b7190c4478f6f77d7cbfa2e6eb"
+    },
+    {
       "path": "chebyshev-2026-11-05/HTOP-refinement.md",
       "bytes": 4494,
       "sha256": "0f570b2b448cb37390cdb42585cf82aa462e96cb8d4ccaf87b31d6af882e9c89"
@@ -93,6 +98,16 @@
       "sha256": "709bb05d3b5f21231736dfaaf2e7c0877e091f7eb7cdc1c2acc3422badaa5694"
     },
     {
+      "path": "chebyshev-2026-11-05/compute_cubic_homoclinic.jl",
+      "bytes": 3236,
+      "sha256": "96268969af2ea0e69d80cfff5c8ad31ff6785a3e8017c5e9c73d7d20189dea2c"
+    },
+    {
+      "path": "chebyshev-2026-11-05/cubic_homoclinic_validation.txt",
+      "bytes": 1004,
+      "sha256": "da2dfb9e11e8bb9fd20e7986de680c2ccb7b2f483c185a6c556f86385a173e54"
+    },
+    {
       "path": "chebyshev-2026-11-05/entropy-boundary-symmetric.json",
       "bytes": 232,
       "sha256": "88372bf8901085942a1bbc844aa1f0201df077f15887d4159d02eceb415df314"
@@ -143,14 +158,34 @@
       "sha256": "fb9e8eff86c7e5a31f148458480986f826102882ac6b75fb8b2f75e14a8839c6"
     },
     {
+      "path": "chebyshev-2026-11-05/entropy_axes_100.bin",
+      "bytes": 1600,
+      "sha256": "2764ff546bc07b579dcecd8247c36afed89d3759ec929df9d66456f26dc3cebb"
+    },
+    {
+      "path": "chebyshev-2026-11-05/entropy_axes_3000.bin",
+      "bytes": 48000,
+      "sha256": "5c65267ff694d0f20ddf2a15b20ad4fc3a1500fc2fa2bbe268fe13f66e137564"
+    },
+    {
       "path": "chebyshev-2026-11-05/entropy_boundary.cpp",
       "bytes": 4269,
       "sha256": "b1466734f8ab48e14e0b6069de3336abeae637b2a7be0eea0f5e91135f7832e2"
     },
     {
+      "path": "chebyshev-2026-11-05/entropy_boundary_zeros.npy",
+      "bytes": 125032,
+      "sha256": "c9620ef5c30e1b733674e25fc06f3744a98b2ff984d6cdb5ef1f3a6dd8714bd5"
+    },
+    {
       "path": "chebyshev-2026-11-05/entropy_bridge.cpp",
       "bytes": 332,
       "sha256": "2c43c1c734388994b271d106374a96e76fa72099bee0de79648eebe46f0b81e6"
+    },
+    {
+      "path": "chebyshev-2026-11-05/entropy_extra_points.npy",
+      "bytes": 192,
+      "sha256": "f73cb338cd1da6b2191d4317f85f2f60ad06e943a01132ef5a73dbd9691df33c"
     },
     {
       "path": "chebyshev-2026-11-05/entropy_extra_refine.py",
@@ -171,6 +206,11 @@
       "path": "chebyshev-2026-11-05/entropy_refine.cpp",
       "bytes": 3800,
       "sha256": "d899ea806b5b7c8a1f993e62b16ef4942ebc628ffc1579a9a3aea67e3d317a48"
+    },
+    {
+      "path": "chebyshev-2026-11-05/entropy_remaining_nonsym.npy",
+      "bytes": 208,
+      "sha256": "22e81594e7e4c5fef02c6cd327a8269d9a90391eade6f941cd92cd010f59977b"
     },
     {
       "path": "chebyshev-2026-11-05/entropy_symmetric_driver.py",
@@ -329,8 +369,8 @@
     },
     {
       "path": "chebyshev-2026-11-05/render_cubic_critical_cobweb.jl",
-      "bytes": 2751,
-      "sha256": "e707a1d1c31f258c8c75c9008161f944aea657df4ef27b865f5f20e17bf7a817"
+      "bytes": 2106,
+      "sha256": "050f38a8ea72f1be434077efbf8189cd371b4d39011fd51814c37bf166c72660"
     },
     {
       "path": "chebyshev-2026-11-05/replot_HTOP.sh",
@@ -381,31 +421,6 @@
       "path": "contour-rule-explanation/draw_contour_example.py",
       "bytes": 2361,
       "sha256": "1fb6cd69806223fc3290fdc509ce57dd12b5e3a369068917750bdcf550849c0c"
-    },
-    {
-      "path": "chebyshev-2026-11-05/entropy_axes_3000.bin",
-      "bytes": 48000,
-      "sha256": "5c65267ff694d0f20ddf2a15b20ad4fc3a1500fc2fa2bbe268fe13f66e137564"
-    },
-    {
-      "path": "chebyshev-2026-11-05/entropy_axes_100.bin",
-      "bytes": 1600,
-      "sha256": "2764ff546bc07b579dcecd8247c36afed89d3759ec929df9d66456f26dc3cebb"
-    },
-    {
-      "path": "chebyshev-2026-11-05/entropy_extra_points.npy",
-      "bytes": 192,
-      "sha256": "f73cb338cd1da6b2191d4317f85f2f60ad06e943a01132ef5a73dbd9691df33c"
-    },
-    {
-      "path": "chebyshev-2026-11-05/entropy_remaining_nonsym.npy",
-      "bytes": 208,
-      "sha256": "22e81594e7e4c5fef02c6cd327a8269d9a90391eade6f941cd92cd010f59977b"
-    },
-    {
-      "path": "chebyshev-2026-11-05/entropy_boundary_zeros.npy",
-      "bytes": 125032,
-      "sha256": "c9620ef5c30e1b733674e25fc06f3744a98b2ff984d6cdb5ef1f3a6dd8714bd5"
     }
   ]
 }
