@@ -47,9 +47,9 @@ function main()
     lines!(ax, [-1.25,1.25], [-1.25,1.25]; color=:grey60, linestyle=:dash, linewidth=1.3)
     grid = range(-1.25,1.25; length=4001)
     lines!(ax, grid, f.(grid); color=:black, linewidth=2.2)
-    scatter!(ax, [xstar], [xstar]; color=:black, markersize=10)
-    text!(ax, xstar+0.04, xstar+0.26; text=L"x_{u,v}^{\ast}",
-        fontsize=36, color=:black, align=(:left,:bottom))
+    scatter!(ax, [xstar], [xstar]; color=:black, markersize=14)
+    text!(ax, xstar-0.065, xstar+0.025; text=L"x_{u,v}^{\ast}",
+        fontsize=36, color=:black, align=(:right,:center))
     limits!(ax, -1.25,1.25,-1.25,1.25)
     # Use the PNG in the paper: PDF viewers may enforce a minimum stroke width
     # and make the densely overlaid sub-pixel cobweb substantially too dark.
