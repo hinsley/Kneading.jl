@@ -14,7 +14,7 @@ function main()
         points
     end
     fig = Figure(size=(900,900), backgroundcolor=:white)
-    ticks = ([-1.,-.5,0.,.5,1.], [L"-1",L"-0.5",L"0",L"0.5",L"1"])
+    ticks = ([-.5,0.,.5,1.], [L"-0.5",L"0",L"0.5",L"1"])
     ax = Axis(fig; bbox=BBox(140,875,110,845), aspect=DataAspect(),
         xlabel=L"x", ylabel=L"f_{u,v}(x)",
         xlabelsize=42, ylabelsize=42, xticklabelsize=36, yticklabelsize=36,
@@ -23,14 +23,14 @@ function main()
         xticklabelpad=10, yticklabelpad=10, xlabelpadding=6, ylabelpadding=6,
         spinewidth=1, xtickwidth=1, ytickwidth=1)
     lines!(ax, cobweb(data["chaotic"]); color=(:indianred,0.50), linewidth=0.16)
-    lines!(ax, [-1.25,1.25], [-1.25,1.25]; color=:grey60, linestyle=:dash, linewidth=1.3)
-    grid = range(-1.25,1.25; length=4001)
+    lines!(ax, [-0.7,1.0], [-0.7,1.0]; color=:grey60, linestyle=:dash, linewidth=1.3)
+    grid = range(-0.7,1.0; length=4001)
     lines!(ax, grid, f.(grid); color=:black, linewidth=2.2)
     lines!(ax, cobweb(data["homoclinic"]); color=:royalblue3, linewidth=1.8)
     scatter!(ax, [xstar], [xstar]; color=:black, markersize=14)
     text!(ax, xstar-0.065, xstar+0.025; text=L"x_{u,v}^{\ast}",
         fontsize=36, color=:black, align=(:right,:center))
-    limits!(ax, -1.25,1.25,-1.25,1.25)
+    limits!(ax, -0.7,1.0,-0.7,1.0)
     # Use the PNG in the paper: PDF viewers may enforce a minimum stroke width
     # and make the densely overlaid sub-pixel cobweb substantially too dark.
     save(joinpath(@__DIR__, "cubic_critical_cobweb.png"), fig; px_per_unit=3)
