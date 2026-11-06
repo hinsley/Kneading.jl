@@ -26,7 +26,7 @@ function main()
     lines!(ax, [-0.7,1.0], [-0.7,1.0]; color=:grey60, linestyle=:dash, linewidth=1.3)
     grid = range(-0.7,1.0; length=4001)
     lines!(ax, grid, f.(grid); color=:black, linewidth=2.2)
-    lines!(ax, cobweb(data["homoclinic"]); color=:royalblue3, linewidth=1.8)
+    lines!(ax, cobweb(data["homoclinic"]); color=(:royalblue3,1.0), linewidth=3.0)
     scatter!(ax, [xstar], [xstar]; color=:black, markersize=14)
     text!(ax, xstar-0.065, xstar+0.025; text=L"x_{u,v}^{\ast}",
         fontsize=36, color=:black, align=(:right,:center))
