@@ -79,8 +79,8 @@
     },
     {
       "path": "chebyshev-2026-11-05/compose_HTOP.py",
-      "bytes": 562,
-      "sha256": "1234b5bc5da3cfa613ac7640c2cca558ffa54b21f97c9b8c210df3571d586418"
+      "bytes": 564,
+      "sha256": "e705b0be08124707d1f75f01e9eb561a35f00ab5365eacf440c301f21acfa750"
     },
     {
       "path": "chebyshev-2026-11-05/compute.jl",
@@ -314,8 +314,8 @@
     },
     {
       "path": "chebyshev-2026-11-05/render_HTOP_boundary.jl",
-      "bytes": 1348,
-      "sha256": "3affefc6415d50b924d5e008acfb3960dba2b710f3c168c979c295a4c63c3174"
+      "bytes": 1351,
+      "sha256": "92633e398f9f9ce1cbc8b61780006cf273b78b23531eda4f761b9c45075c3360"
     },
     {
       "path": "chebyshev-2026-11-05/render_HTOP_contour_overlay.jl",
