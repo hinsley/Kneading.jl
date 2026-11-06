@@ -1,0 +1,411 @@
+{
+  "snapshot_date": "2026-11-05",
+  "kneading_commit": "f2d9add0cfc3651fc38dfee928f08ef240d9e89f",
+  "files": [
+    {
+      "path": "chebyshev-2026-11-05/Figure6-layout-cache.json",
+      "bytes": 497,
+      "sha256": "b2b8876f00e926d589628a00dcfafa062f4b4ba251e1468a2a701f05c72e039d"
+    },
+    {
+      "path": "chebyshev-2026-11-05/Figure6-stacked.md",
+      "bytes": 3500,
+      "sha256": "cdf2b4906d3e934c2e77a1908a288da728ad7722de4523baea58fce083c3d7ba"
+    },
+    {
+      "path": "chebyshev-2026-11-05/HTOP-refinement.md",
+      "bytes": 4494,
+      "sha256": "0f570b2b448cb37390cdb42585cf82aa462e96cb8d4ccaf87b31d6af882e9c89"
+    },
+    {
+      "path": "chebyshev-2026-11-05/HTOP.md",
+      "bytes": 3480,
+      "sha256": "93b3fc7a6dba38ab895ec30258bc0d9e1fe4d32f1f6d3756dfe6b7ab1a655a7e"
+    },
+    {
+      "path": "chebyshev-2026-11-05/Manifest.toml",
+      "bytes": 112816,
+      "sha256": "ea2382c2e60170b0846566e9565d7db0e81330bfc0b3e54da7299e9d45911b48"
+    },
+    {
+      "path": "chebyshev-2026-11-05/Project.toml",
+      "bytes": 300,
+      "sha256": "2074e017ea9aad9cc0d9e2addd38d8dae21182a96892587886f6753766d66a22"
+    },
+    {
+      "path": "chebyshev-2026-11-05/README.md",
+      "bytes": 3526,
+      "sha256": "1b4a373135ac55496ab0fa9e127192449526a2770e7bf55fc486f1f760af8c84"
+    },
+    {
+      "path": "chebyshev-2026-11-05/ZILES.md",
+      "bytes": 4507,
+      "sha256": "c4c5d03d861a79642590f44782c1439b644faab6c9a2f9b7cc778e883b86d188"
+    },
+    {
+      "path": "chebyshev-2026-11-05/assemble_refined_entropy.py",
+      "bytes": 2207,
+      "sha256": "77db3de520a7800d71017d441ba737b097fbe6e78c416a96ff4f17a0ca43296b"
+    },
+    {
+      "path": "chebyshev-2026-11-05/boundary_symmetric_fix.py",
+      "bytes": 361,
+      "sha256": "911282f025cc615bbfa579bc237b70e242a7f9600d84a00bd917421e257f26be"
+    },
+    {
+      "path": "chebyshev-2026-11-05/cairo_bounded_segments.jl",
+      "bytes": 1269,
+      "sha256": "24964b0b11d9f3d3c09a136ef3456c7e3c8a2254d07ba38455ae30d226223318"
+    },
+    {
+      "path": "chebyshev-2026-11-05/check_ambiguous_orders.py",
+      "bytes": 847,
+      "sha256": "6cea09a35524313a306f0643c39ede53c9726d039593a74b53e959349163aa24"
+    },
+    {
+      "path": "chebyshev-2026-11-05/compose_Figure6.py",
+      "bytes": 1755,
+      "sha256": "618d3813c0c6989275a6e1e593dac36eb98b6ce42b21c5fd18e624d2f04cc1af"
+    },
+    {
+      "path": "chebyshev-2026-11-05/compose_Figure6_gapped.py",
+      "bytes": 799,
+      "sha256": "132f4c1a032d555eb2581093a985ef11b705036e1be8b71f4391bbb5e9a21fda"
+    },
+    {
+      "path": "chebyshev-2026-11-05/compose_HTOP.py",
+      "bytes": 562,
+      "sha256": "1234b5bc5da3cfa613ac7640c2cca558ffa54b21f97c9b8c210df3571d586418"
+    },
+    {
+      "path": "chebyshev-2026-11-05/compute.jl",
+      "bytes": 4476,
+      "sha256": "959b0bedc98ff2dfddf6ed6059d5e53d6c16b3bce9246a2680dfce9ea14d2aab"
+    },
+    {
+      "path": "chebyshev-2026-11-05/compute_ZILESmin_boundary_log.jl",
+      "bytes": 4545,
+      "sha256": "b693a282aa1d1aa3cdac4f8f7612c930108002e9929f7286aabb85712df8f515"
+    },
+    {
+      "path": "chebyshev-2026-11-05/compute_ZILESmin_log.jl",
+      "bytes": 4513,
+      "sha256": "709bb05d3b5f21231736dfaaf2e7c0877e091f7eb7cdc1c2acc3422badaa5694"
+    },
+    {
+      "path": "chebyshev-2026-11-05/entropy-boundary-symmetric.json",
+      "bytes": 232,
+      "sha256": "88372bf8901085942a1bbc844aa1f0201df077f15887d4159d02eceb415df314"
+    },
+    {
+      "path": "chebyshev-2026-11-05/entropy-diagonal-arb.json",
+      "bytes": 2164,
+      "sha256": "c84c97c78c2f543f031d93c4d21e521e8193517f3ef6ebe1d662c4fc05df2008"
+    },
+    {
+      "path": "chebyshev-2026-11-05/entropy-nan512-arb.json",
+      "bytes": 521,
+      "sha256": "f26f903283d66b1d4a9626db853b49b36345f662889d547263411d55b0ec2d8b"
+    },
+    {
+      "path": "chebyshev-2026-11-05/entropy-reference-polynomials.txt",
+      "bytes": 21997,
+      "sha256": "ed0f6f4af0504c1d3b33d859652bb30ffaa6d9806429680988aebc1a8cf0eb7b"
+    },
+    {
+      "path": "chebyshev-2026-11-05/entropy-refined-validation.json",
+      "bytes": 1692,
+      "sha256": "1b838eab72e39e149970a5c900572a2aa87889f70735cc3eb6151aa568d74e2f"
+    },
+    {
+      "path": "chebyshev-2026-11-05/entropy-refinement-final.json",
+      "bytes": 202,
+      "sha256": "3570523f8f278a41c5faf823a4dad46656363a5a0b184a197f27ec1e163047db"
+    },
+    {
+      "path": "chebyshev-2026-11-05/entropy-refinement.json",
+      "bytes": 247,
+      "sha256": "224c10793c2c1a50f5586b78e168d9dc12ce94f6a62c518cca1bdcc340ef4bdf"
+    },
+    {
+      "path": "chebyshev-2026-11-05/entropy-symmetric-factors.json",
+      "bytes": 4560,
+      "sha256": "1cefd492819c9422328605be190578d4d31aacf2fed11f2988719aa1b2a7665a"
+    },
+    {
+      "path": "chebyshev-2026-11-05/entropy-validation.json",
+      "bytes": 365,
+      "sha256": "f1260efef3d014b66aa858ee59ec2b9274eb907489e2709533cf2aa0d34f1a5e"
+    },
+    {
+      "path": "chebyshev-2026-11-05/entropy_ambiguous_orders.json",
+      "bytes": 500,
+      "sha256": "fb9e8eff86c7e5a31f148458480986f826102882ac6b75fb8b2f75e14a8839c6"
+    },
+    {
+      "path": "chebyshev-2026-11-05/entropy_boundary.cpp",
+      "bytes": 4269,
+      "sha256": "b1466734f8ab48e14e0b6069de3336abeae637b2a7be0eea0f5e91135f7832e2"
+    },
+    {
+      "path": "chebyshev-2026-11-05/entropy_bridge.cpp",
+      "bytes": 332,
+      "sha256": "2c43c1c734388994b271d106374a96e76fa72099bee0de79648eebe46f0b81e6"
+    },
+    {
+      "path": "chebyshev-2026-11-05/entropy_extra_refine.py",
+      "bytes": 810,
+      "sha256": "decbd194a2b052f396bc594306fdb6f9c6cf300511a02cd65e7ef456a775f94b"
+    },
+    {
+      "path": "chebyshev-2026-11-05/entropy_last_edge.py",
+      "bytes": 920,
+      "sha256": "cf87451b6f89abbbb4d899996439aaee40a98992d3813bf86e130c9c41d390a5"
+    },
+    {
+      "path": "chebyshev-2026-11-05/entropy_periodic_summary.json",
+      "bytes": 118,
+      "sha256": "e4bf06ee6e9f9d5e782ae2c1c5118c8a576a2f31bab84284401887ff7646567b"
+    },
+    {
+      "path": "chebyshev-2026-11-05/entropy_refine.cpp",
+      "bytes": 3800,
+      "sha256": "d899ea806b5b7c8a1f993e62b16ef4942ebc628ffc1579a9a3aea67e3d317a48"
+    },
+    {
+      "path": "chebyshev-2026-11-05/entropy_symmetric_driver.py",
+      "bytes": 1233,
+      "sha256": "d25ec855617d29f4e72aff09afc49fc1c180b1d3c742565934c94a0e19084010"
+    },
+    {
+      "path": "chebyshev-2026-11-05/extend_boundary_zeros.py",
+      "bytes": 1069,
+      "sha256": "ae513c0a7f7503f73ab04552069ab750d10865596173c6df78999b77e821881f"
+    },
+    {
+      "path": "chebyshev-2026-11-05/extend_entropy.py",
+      "bytes": 2240,
+      "sha256": "ed54d087ddfcb19d857c6b785383ab3031a4bcb8f04e3ae121d35323d6b0c677"
+    },
+    {
+      "path": "chebyshev-2026-11-05/finish_entropy.py",
+      "bytes": 3039,
+      "sha256": "0a08ddaacee7ff3146bf0cb410bab599aa7173725af6605aa65f8ca2585dd38c"
+    },
+    {
+      "path": "chebyshev-2026-11-05/finish_refined_tail.py",
+      "bytes": 2147,
+      "sha256": "54829bc0395b280f0812fea1edcd71baf9e25822b36c9bf9be101ac213ec32fb"
+    },
+    {
+      "path": "chebyshev-2026-11-05/merge_boundary_zeros.py",
+      "bytes": 1796,
+      "sha256": "c5c2eb672cbf65866d81db317cc4564b1dc11b7c593b4fb349512045bc170332"
+    },
+    {
+      "path": "chebyshev-2026-11-05/orbit_diagram_v_minus_half.jl",
+      "bytes": 2502,
+      "sha256": "d45f662f2074e825c8ec11d1a30653b57e800d3f88c7a856a4134d394c54f15f"
+    },
+    {
+      "path": "chebyshev-2026-11-05/orbit_diagram_v_minus_half.md",
+      "bytes": 1391,
+      "sha256": "1c574a0f5e350bc8366350dda4675e0183bbb23fb8291b5f3b04d0f920139cbc"
+    },
+    {
+      "path": "chebyshev-2026-11-05/orbit_diagram_v_minus_half_log_10x.jl",
+      "bytes": 2624,
+      "sha256": "94d330fa61bfb2ca7ac9814995223318867e1bf6fa3f2ad4e8a96160806641d7"
+    },
+    {
+      "path": "chebyshev-2026-11-05/orbit_diagram_v_minus_half_log_10x.md",
+      "bytes": 1090,
+      "sha256": "1398075a75be38b65630ce42f68005431deaefc5ae73cecf6e495ed6747a3e5d"
+    },
+    {
+      "path": "chebyshev-2026-11-05/periodic_tail.cpp",
+      "bytes": 2075,
+      "sha256": "a7d64f46c9828a46ec91aa6bcaf43a396904ec4a24457cded0dd21167914a5a5"
+    },
+    {
+      "path": "chebyshev-2026-11-05/periodic_tail_refine.py",
+      "bytes": 2568,
+      "sha256": "cacf26a8e00390af50e3cc58764f5b6e123191c463f0e6c1d579040d102861f6"
+    },
+    {
+      "path": "chebyshev-2026-11-05/refine_boundary_zeros.py",
+      "bytes": 2531,
+      "sha256": "4bc311518838ecda0eef34917471fe7707a29f85110a7607690c4579f3b15de3"
+    },
+    {
+      "path": "chebyshev-2026-11-05/refine_entropy.py",
+      "bytes": 2965,
+      "sha256": "e9e5996386f0441b41b9c81cc9a6aba45d115f2178a4e5fdb6edc60c95c35471"
+    },
+    {
+      "path": "chebyshev-2026-11-05/refresh_Figure6_layout.py",
+      "bytes": 1506,
+      "sha256": "6e1083cdd405b00e5fe62bc28d0fdd31d3536877c2bcf42dda962d48befca16c"
+    },
+    {
+      "path": "chebyshev-2026-11-05/render.jl",
+      "bytes": 3641,
+      "sha256": "88d17e78412555caa88b127ddd0b1f2550e68795472c85cb6164ca133f53e24f"
+    },
+    {
+      "path": "chebyshev-2026-11-05/render_Figure6_orbit_axis_frame.jl",
+      "bytes": 891,
+      "sha256": "47fc14854e1070e2a72bdca731d7fed4e40e04596c261c3d47e405d026ad5e92"
+    },
+    {
+      "path": "chebyshev-2026-11-05/render_Figure6_orbit_right_axis_frame.jl",
+      "bytes": 943,
+      "sha256": "385237bb54e822d52b59edc96b3cd10d14fed76240691ff413aab46af42cb9a0"
+    },
+    {
+      "path": "chebyshev-2026-11-05/render_Figure6_orbit_upper_panel.jl",
+      "bytes": 2112,
+      "sha256": "f5df7fc60f58842f3dccf2238b7d2c95e5cc42954110249f6515dfe09cbc9f12"
+    },
+    {
+      "path": "chebyshev-2026-11-05/render_Figure6_orbit_upper_panel_opacity010.jl",
+      "bytes": 1966,
+      "sha256": "aa6c0a877a73a6b2bf6f0d11ecf0927526fd8e6bdbcd955340c7a573224979a1"
+    },
+    {
+      "path": "chebyshev-2026-11-05/render_HTOP_boundary.jl",
+      "bytes": 1348,
+      "sha256": "3affefc6415d50b924d5e008acfb3960dba2b710f3c168c979c295a4c63c3174"
+    },
+    {
+      "path": "chebyshev-2026-11-05/render_HTOP_contour_overlay.jl",
+      "bytes": 1233,
+      "sha256": "055f3184be6c17b8a8f9b97205fc0822493d6ce55a62978ef1608b67f520ed4c"
+    },
+    {
+      "path": "chebyshev-2026-11-05/render_ZILES_max.jl",
+      "bytes": 3625,
+      "sha256": "5eb274e2d6603b14fdbffde679e843dd8878249750a0754cd4a75cde6f4c8795"
+    },
+    {
+      "path": "chebyshev-2026-11-05/render_ZILES_min.jl",
+      "bytes": 3728,
+      "sha256": "09061ba273efcea73a49cb9cc6ddf9f378a6f8b0058f36acc5abdeab700bb06e"
+    },
+    {
+      "path": "chebyshev-2026-11-05/render_ZILESmin_boundary_log.jl",
+      "bytes": 4182,
+      "sha256": "aaf978281282d250201bb04cc371ba1873e3003c78f94e214af9a25211b45071"
+    },
+    {
+      "path": "chebyshev-2026-11-05/render_ZILESmin_boundary_log_refined.jl",
+      "bytes": 4299,
+      "sha256": "4874f30d55ada57de8212718378589fd2ec8aeea67ad61e996041c1ff51ca043"
+    },
+    {
+      "path": "chebyshev-2026-11-05/render_ZILESmin_boundary_log_tapered.jl",
+      "bytes": 4326,
+      "sha256": "c6a9e113a35d7ee2428cf3b97a8ec52260062c4de4e5eb278ced454f978aa71c"
+    },
+    {
+      "path": "chebyshev-2026-11-05/render_ZILESmin_boundary_log_tapered_opacity09.jl",
+      "bytes": 4336,
+      "sha256": "1166640b91689a913801e5b27bdb7495b9bf3d22116a9d7c6e643e797d8bcd4f"
+    },
+    {
+      "path": "chebyshev-2026-11-05/render_ZILESmin_log.jl",
+      "bytes": 3827,
+      "sha256": "6fe709296e5bc077c68b642f47acaccf4dac8bb1a28103388d1343ded116f83e"
+    },
+    {
+      "path": "chebyshev-2026-11-05/render_boundary_contour_overlay.jl",
+      "bytes": 1227,
+      "sha256": "18a12437e69649a33e89f06a95e255a534f13a4c17d5190db9df78a1584cc6f4"
+    },
+    {
+      "path": "chebyshev-2026-11-05/render_boundary_reference_check.jl",
+      "bytes": 4213,
+      "sha256": "a80b284d357d506b6a1d3291be2de02c84f75abe0b78c28050ee4b84271dd207"
+    },
+    {
+      "path": "chebyshev-2026-11-05/render_cubic_critical_cobweb.jl",
+      "bytes": 2748,
+      "sha256": "3a2c69d1a40c996f873941571116695dcc327b6d6dfa33b98207597bd354fae0"
+    },
+    {
+      "path": "chebyshev-2026-11-05/replot_HTOP.sh",
+      "bytes": 195,
+      "sha256": "d76234d557b06fb6dc3af00c8be8d96651523431bb138017c5fef48ad47f4620"
+    },
+    {
+      "path": "chebyshev-2026-11-05/resolve_nan_512.py",
+      "bytes": 710,
+      "sha256": "df410cfa79f7a8273a5bf2bd412c20b4db4393a232af1c401f9b176d38b1d68a"
+    },
+    {
+      "path": "chebyshev-2026-11-05/symmetric_entropy.cpp",
+      "bytes": 289,
+      "sha256": "f4a1e78a06086755c6703e41313f5ca51a0f3e230de83090741a7fac241c3b5b"
+    },
+    {
+      "path": "chebyshev-2026-11-05/validate_entropy.jl",
+      "bytes": 909,
+      "sha256": "415afb8c1c9c3e260434f74abb2e6a374a8c39ed21b8f90b3cca91b2ac755e82"
+    },
+    {
+      "path": "chebyshev-2026-11-05/validate_periodic_tail.py",
+      "bytes": 799,
+      "sha256": "790f99d41430d8fbd17e2bc3e89fa82d26c4a0926373dafcc809117b5bc0d456"
+    },
+    {
+      "path": "chebyshev-2026-11-05/validate_refined_entropy.py",
+      "bytes": 1517,
+      "sha256": "7daca8e1651a0664f918501755364162358081b16001f985d1323e23e0beaed5"
+    },
+    {
+      "path": "chebyshev-2026-11-05/validation.txt",
+      "bytes": 568,
+      "sha256": "f7b0ece206895cec71d6dce1843a74a7bfe3e2ecfb64ef28200ed3da825b88fd"
+    },
+    {
+      "path": "chebyshev-2026-11-05/validation_boundary_log.txt",
+      "bytes": 587,
+      "sha256": "1ca6dff63e6b63cc32227d3e2be613dacf3618496ad11077fec8d9edd585d9bf"
+    },
+    {
+      "path": "chebyshev-2026-11-05/validation_log.txt",
+      "bytes": 575,
+      "sha256": "0814d35b7e7227676724bba7a1434bb138fb40842f12c7db4d5a3abfdd6a5714"
+    },
+    {
+      "path": "contour-rule-explanation/draw_contour_example.py",
+      "bytes": 2361,
+      "sha256": "1fb6cd69806223fc3290fdc509ce57dd12b5e3a369068917750bdcf550849c0c"
+    },
+    {
+      "path": "chebyshev-2026-11-05/entropy_axes_3000.bin",
+      "bytes": 48000,
+      "sha256": "5c65267ff694d0f20ddf2a15b20ad4fc3a1500fc2fa2bbe268fe13f66e137564"
+    },
+    {
+      "path": "chebyshev-2026-11-05/entropy_axes_100.bin",
+      "bytes": 1600,
+      "sha256": "2764ff546bc07b579dcecd8247c36afed89d3759ec929df9d66456f26dc3cebb"
+    },
+    {
+      "path": "chebyshev-2026-11-05/entropy_extra_points.npy",
+      "bytes": 192,
+      "sha256": "f73cb338cd1da6b2191d4317f85f2f60ad06e943a01132ef5a73dbd9691df33c"
+    },
+    {
+      "path": "chebyshev-2026-11-05/entropy_remaining_nonsym.npy",
+      "bytes": 208,
+      "sha256": "22e81594e7e4c5fef02c6cd327a8269d9a90391eade6f941cd92cd010f59977b"
+    },
+    {
+      "path": "chebyshev-2026-11-05/entropy_boundary_zeros.npy",
+      "bytes": 125032,
+      "sha256": "c9620ef5c30e1b733674e25fc06f3744a98b2ff984d6cdb5ef1f3a6dd8714bd5"
+    }
+  ]
+}

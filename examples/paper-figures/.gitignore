@@ -1,0 +1,13 @@
+**/__pycache__/
+**/.venv/
+chebyshev-2026-11-05/Kneading.jl/
+*.jld2
+*.npz
+*.pkl
+*.so
+*.png
+*.pdf
+*.log
+chebyshev-2026-11-05/entropy_boundary
+chebyshev-2026-11-05/entropy_raw_*.bin
+chebyshev-2026-11-05/entropy_display_*.bin

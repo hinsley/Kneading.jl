@@ -1,0 +1,15 @@
+{
+  "target_cells": 173916,
+  "converged": 173184,
+  "remaining": 732,
+  "tolerance": 0.001,
+  "minimum_order": 512,
+  "max_order": 4096,
+  "order_counts": {
+    "256": 1,
+    "512": 169283,
+    "1024": 2832,
+    "2048": 801,
+    "4096": 999
+  }
+}

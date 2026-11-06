@@ -1,0 +1,22 @@
+{
+  "grid": [
+    3000,
+    3000
+  ],
+  "orders": [
+    64,
+    32
+  ],
+  "ambiguous_estimates": 10227,
+  "distinct_arb_fallbacks": 871,
+  "unresolved": 0,
+  "sensitive_cells": 85155,
+  "filled_cells": 85155,
+  "fill_value": 0.01,
+  "validation_polynomials": 600,
+  "max_arb_difference": 4.757305660518796e-13,
+  "h64_range": [
+    0.0,
+    1.0218439094130147
+  ]
+}

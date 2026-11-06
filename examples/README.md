@@ -1,5 +1,10 @@
 # Kneading diagram examples
 
+The [paper figure source archive](paper-figures/README.md) contains the
+Chebyshev Lyapunov/kneading sweeps, orbit panels, refined entropy plots,
+critical-orbit cobweb, and their retained plotting variants from the
+2026-11-05 paper-editing session.
+
 `Kneading.Diagrams` exports `ParameterPlane`, `scan_plane!`,
 `level_contours`, `add_level_contours!`, and `KneadingDiagram`. Loading
 CairoMakie activates `plot_kneading_contours` and

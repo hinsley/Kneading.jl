@@ -1,0 +1,9 @@
+{
+  "recomputed_cells": 186583,
+  "remaining": 2,
+  "max_iterates": 32768,
+  "tolerance": 0.001,
+  "additional_boundary_cells": 15613,
+  "boundary_zeros_recovered_positive": 9599,
+  "fill_value": 0.01
+}

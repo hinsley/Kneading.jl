@@ -1,0 +1,414 @@
+{
+  "local_directory": "/home/carter/Documents/chebyshev-figure",
+  "note": "Inventory only: these large caches and renderings are not uploaded by this code backup. Small inputs listed in SOURCE-MANIFEST.json are included.",
+  "files": [
+    {
+      "name": "Figure6-balanced-padding-in-paper.png",
+      "bytes": 277192
+    },
+    {
+      "name": "Figure6-flush-lighter-in-paper.png",
+      "bytes": 241908
+    },
+    {
+      "name": "Figure6-fullwidth-in-paper.png",
+      "bytes": 201812
+    },
+    {
+      "name": "Figure6-junction-check.png",
+      "bytes": 23782
+    },
+    {
+      "name": "Figure6-left-axis-restored-in-paper.png",
+      "bytes": 269769
+    },
+    {
+      "name": "Figure6-right-axis-in-paper.png",
+      "bytes": 261180
+    },
+    {
+      "name": "Figure6-stacked-in-paper.png",
+      "bytes": 270861
+    },
+    {
+      "name": "Figure6-tight-colorbar-in-paper.png",
+      "bytes": 261874
+    },
+    {
+      "name": "Figure6-top-no-ticks-in-paper.png",
+      "bytes": 266266
+    },
+    {
+      "name": "Figure6-updated-in-paper.png",
+      "bytes": 269767
+    },
+    {
+      "name": "Figure6-v-zero-nudged-in-paper.png",
+      "bytes": 217206
+    },
+    {
+      "name": "Figure6-zero-label-check.png",
+      "bytes": 22715
+    },
+    {
+      "name": "Figure6_ZILESmin_with_orbit.png",
+      "bytes": 7278448
+    },
+    {
+      "name": "Figure6_ZILESmin_with_orbit_gapped_opacity010.png",
+      "bytes": 7068838
+    },
+    {
+      "name": "Figure6_orbit_axis_frame.png",
+      "bytes": 27934
+    },
+    {
+      "name": "Figure6_orbit_right_axis_frame.png",
+      "bytes": 22855
+    },
+    {
+      "name": "Figure6_orbit_upper_panel.png",
+      "bytes": 601189
+    },
+    {
+      "name": "Figure6_orbit_upper_panel_no_ticks.png",
+      "bytes": 1119810
+    },
+    {
+      "name": "HTOP-in-paper.png",
+      "bytes": 245645
+    },
+    {
+      "name": "HTOP-refined-in-paper.png",
+      "bytes": 255019
+    },
+    {
+      "name": "HTOP-strong-dropoff-purple-in-paper.png",
+      "bytes": 239552
+    },
+    {
+      "name": "HTOP_base_preview.png",
+      "bytes": 177893
+    },
+    {
+      "name": "HTOP_boundary_base.png",
+      "bytes": 558669
+    },
+    {
+      "name": "HTOP_boundary_base_degree64.png",
+      "bytes": 566620
+    },
+    {
+      "name": "HTOP_boundary_log_kneading.png",
+      "bytes": 3849325
+    },
+    {
+      "name": "HTOP_boundary_log_kneading_degree64.png",
+      "bytes": 5805357
+    },
+    {
+      "name": "HTOP_boundary_log_kneading_opacity09.png",
+      "bytes": 5798763
+    },
+    {
+      "name": "HTOP_contours_opacity16_width11.png",
+      "bytes": 5792838
+    },
+    {
+      "name": "HTOP_preview.png",
+      "bytes": 414679
+    },
+    {
+      "name": "HTOP_refinement_comparison.png",
+      "bytes": 97630
+    },
+    {
+      "name": "ZILES.png",
+      "bytes": 4804298
+    },
+    {
+      "name": "ZILES_min.png",
+      "bytes": 4802287
+    },
+    {
+      "name": "ZILESmax.png",
+      "bytes": 4804298
+    },
+    {
+      "name": "ZILESmin-in-paper.png",
+      "bytes": 201670
+    },
+    {
+      "name": "ZILESmin.png",
+      "bytes": 4802287
+    },
+    {
+      "name": "ZILESmin_boundary_log.png",
+      "bytes": 7194787
+    },
+    {
+      "name": "ZILESmin_boundary_log_refined.png",
+      "bytes": 7748006
+    },
+    {
+      "name": "ZILESmin_boundary_log_tapered.png",
+      "bytes": 8150363
+    },
+    {
+      "name": "ZILESmin_boundary_log_tapered_opacity09.png",
+      "bytes": 7929458
+    },
+    {
+      "name": "ZILESmin_log.png",
+      "bytes": 1579479
+    },
+    {
+      "name": "boundary_contours_opacity09.png",
+      "bytes": 7890893
+    },
+    {
+      "name": "boundary_reference_check.png",
+      "bytes": 4554302
+    },
+    {
+      "name": "boundary_refined_layout_check.png",
+      "bytes": 3794151
+    },
+    {
+      "name": "boundary_small_check.png",
+      "bytes": 4554302
+    },
+    {
+      "name": "chebyshev_lyapunov_kneading_3000.png",
+      "bytes": 5699524
+    },
+    {
+      "name": "chebyshev_lyapunov_kneading_3000_finite_ticks.png",
+      "bytes": 5699524
+    },
+    {
+      "name": "chebyshev_lyapunov_kneading_spaced.png",
+      "bytes": 4804298
+    },
+    {
+      "name": "chebyshev_lyapunov_kneading_tidy.png",
+      "bytes": 4969090
+    },
+    {
+      "name": "cobweb-in-paper.png",
+      "bytes": 244727
+    },
+    {
+      "name": "contours_3000.jld2",
+      "bytes": 868820652
+    },
+    {
+      "name": "contours_boundary_log_30.jld2",
+      "bytes": 967820
+    },
+    {
+      "name": "contours_boundary_log_3000.jld2",
+      "bytes": 4481654636
+    },
+    {
+      "name": "contours_log_3000.jld2",
+      "bytes": 107827756
+    },
+    {
+      "name": "cubic_critical_cobweb.pdf",
+      "bytes": 76918
+    },
+    {
+      "name": "cubic_critical_cobweb.png",
+      "bytes": 578407
+    },
+    {
+      "name": "cubic_critical_cobweb_data.jld2",
+      "bytes": 41370
+    },
+    {
+      "name": "entropy_axes_100.bin",
+      "bytes": 1600
+    },
+    {
+      "name": "entropy_axes_3000.bin",
+      "bytes": 48000
+    },
+    {
+      "name": "entropy_boundary_log_3000.npz",
+      "bytes": 243050246
+    },
+    {
+      "name": "entropy_boundary_refined_3000.npz",
+      "bytes": 164311144
+    },
+    {
+      "name": "entropy_boundary_refined_final_3000.npz",
+      "bytes": 155689283
+    },
+    {
+      "name": "entropy_boundary_refined_primary_3000.npz",
+      "bytes": 155485498
+    },
+    {
+      "name": "entropy_boundary_zeros.npy",
+      "bytes": 125032
+    },
+    {
+      "name": "entropy_boundary_zeros_1024.npz",
+      "bytes": 132862
+    },
+    {
+      "name": "entropy_boundary_zeros_2048.npz",
+      "bytes": 7742
+    },
+    {
+      "name": "entropy_boundary_zeros_4096.npz",
+      "bytes": 3870
+    },
+    {
+      "name": "entropy_boundary_zeros_512.npz",
+      "bytes": 132862
+    },
+    {
+      "name": "entropy_boundary_zeros_8192.npz",
+      "bytes": 1598
+    },
+    {
+      "name": "entropy_boundary_zeros_extended_16384.npz",
+      "bytes": 344728
+    },
+    {
+      "name": "entropy_boundary_zeros_final.npz",
+      "bytes": 344728
+    },
+    {
+      "name": "entropy_boundary_zeros_tails.pkl",
+      "bytes": 1044303
+    },
+    {
+      "name": "entropy_display_3000.bin",
+      "bytes": 72000000
+    },
+    {
+      "name": "entropy_extended_8192.npz",
+      "bytes": 3653230
+    },
+    {
+      "name": "entropy_extra_points.npy",
+      "bytes": 192
+    },
+    {
+      "name": "entropy_last_edge_16384.npz",
+      "bytes": 926
+    },
+    {
+      "name": "entropy_last_edge_32768.npz",
+      "bytes": 926
+    },
+    {
+      "name": "entropy_periodic_roots.pkl",
+      "bytes": 341588
+    },
+    {
+      "name": "entropy_periodic_tails.pkl",
+      "bytes": 4542935
+    },
+    {
+      "name": "entropy_raw_100.bin",
+      "bytes": 160000
+    },
+    {
+      "name": "entropy_raw_3000.bin",
+      "bytes": 144000000
+    },
+    {
+      "name": "entropy_refinement_1024.npz",
+      "bytes": 74750
+    },
+    {
+      "name": "entropy_refinement_2048.npz",
+      "bytes": 29454
+    },
+    {
+      "name": "entropy_refinement_256.npz",
+      "bytes": 2783166
+    },
+    {
+      "name": "entropy_refinement_4096.npz",
+      "bytes": 16942
+    },
+    {
+      "name": "entropy_refinement_512.npz",
+      "bytes": 2783166
+    },
+    {
+      "name": "entropy_remaining_nonsym.npy",
+      "bytes": 208
+    },
+    {
+      "name": "line199-citation-spacing.png",
+      "bytes": 279362
+    },
+    {
+      "name": "lyapunov_3000.jld2",
+      "bytes": 216049696
+    },
+    {
+      "name": "lyapunov_boundary_log_30.jld2",
+      "bytes": 23776
+    },
+    {
+      "name": "lyapunov_boundary_log_3000.jld2",
+      "bytes": 216049696
+    },
+    {
+      "name": "lyapunov_log_3000.jld2",
+      "bytes": 216049696
+    },
+    {
+      "name": "milnor-tresser-citation-in-paper.png",
+      "bytes": 292870
+    },
+    {
+      "name": "orbit_diagram_v_minus_half.jld2",
+      "bytes": 49209489
+    },
+    {
+      "name": "orbit_diagram_v_minus_half.pdf",
+      "bytes": 127285
+    },
+    {
+      "name": "orbit_diagram_v_minus_half.png",
+      "bytes": 1403478
+    },
+    {
+      "name": "orbit_diagram_v_minus_half_log_10x.jld2",
+      "bytes": 491699350
+    },
+    {
+      "name": "orbit_diagram_v_minus_half_log_10x.png",
+      "bytes": 5028234
+    },
+    {
+      "name": "preview.png",
+      "bytes": 734583
+    },
+    {
+      "name": "preview_ZILES_min.png",
+      "bytes": 734325
+    },
+    {
+      "name": "preview_ZILESmin_boundary_log.png",
+      "bytes": 854696
+    },
+    {
+      "name": "preview_ZILESmin_log.png",
+      "bytes": 286262
+    },
+    {
+      "name": "preview_boundary_reference_check.png",
+      "bytes": 779389
+    }
+  ]
+}

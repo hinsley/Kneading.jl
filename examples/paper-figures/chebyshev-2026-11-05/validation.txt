@@ -1,0 +1,8 @@
+Grid: 3000 x 3000; burn-in 8192; averaging 16384; Float64, natural log
+GPU: NVIDIA GeForce RTX 4070 Ti
+Analytic checks: passed (zero map, stable fixed point, Chebyshev endpoint orbits)
+CPU/GPU |delta lambda| on 256 sample points: median=0.0, 95th percentile=0.003923369521309353, max=0.018354774113681832
+Doubling burn-in and averaging: |delta tanh(lambda/0.5)| median=7.741030039198904e-14, 95th percentile=0.0035753721608841327, max=0.0694921030908135
+Finite lambda_max extrema: (-9.19534683576905, 2.1972245773359225)
+Negative-infinite values: 1
+NaN/+Inf values: 0
