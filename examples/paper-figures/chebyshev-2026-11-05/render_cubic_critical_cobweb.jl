@@ -28,7 +28,7 @@ function main()
     lines!(ax, grid, f.(grid); color=:black, linewidth=2.2)
     lines!(ax, cobweb(data["homoclinic"]); color=(:royalblue3,1.0), linewidth=3.0)
     scatter!(ax, [xstar], [xstar]; color=:black, markersize=14)
-    text!(ax, xstar-0.065, xstar+0.025; text=L"x_{u,v}^{\ast}",
+    text!(ax, xstar-0.08, xstar+0.025; text=L"x_{u,v}^{\ast}",
         fontsize=36, color=:black, align=(:right,:center))
     limits!(ax, -0.7,1.0,-0.7,1.0)
     # Use the PNG in the paper: PDF viewers may enforce a minimum stroke width

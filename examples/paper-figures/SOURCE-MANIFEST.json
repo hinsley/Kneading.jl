@@ -369,8 +369,8 @@
     },
     {
       "path": "chebyshev-2026-11-05/render_cubic_critical_cobweb.jl",
-      "bytes": 2092,
-      "sha256": "5ec934c777628d37309355d0af90ad33b2f400ed65d03abb5ccc3cbb65f92c86"
+      "bytes": 2091,
+      "sha256": "1d6383145a5e61754a08719f1c194472fe446ae7e51b49e8d2ae5eb9fa1ce200"
     },
     {
       "path": "chebyshev-2026-11-05/replot_HTOP.sh",
